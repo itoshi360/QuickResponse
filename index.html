@@ -12,6 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Mammoth.js for Word (.docx) Parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <!-- Lame.js for Pure Client-side MP3 Encoding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.all.min.js"></script>
+    <!-- JSZip for Bulk MP3 Archiving -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <style>
         body {
@@ -100,6 +104,11 @@
                     <i class="fa-solid fa-chevron-down absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-indigo-200 pointer-events-none"></i>
                 </div>
 
+                <!-- Audio Export Modal Button -->
+                <button onclick="openExportAudioModal()" class="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded-lg transition font-bold flex items-center gap-1 shadow-sm" title="通し番号付きMP3音声ファイルの出力">
+                    <i class="fa-solid fa-file-audio"></i> <span>MP3音声出力</span>
+                </button>
+
                 <!-- Add Script Button -->
                 <button onclick="openScriptModal()" class="text-xs bg-emerald-500 hover:bg-emerald-600 text-white px-2.5 py-1 rounded-lg transition font-bold flex items-center gap-1 shadow-sm">
                     <i class="fa-solid fa-file-word"></i> <span>スクリプト追加</span>
@@ -142,35 +151,61 @@
                 </div>
             </div>
 
-            <!-- Independent Language Speed Controls Bar -->
+            <!-- Independent Speaker & Language Speed Slider Controls (0.7x ~ 1.4x) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200/80">
-                <!-- Japanese Audio Speed -->
-                <div class="flex items-center justify-between gap-1.5 bg-white p-1.5 rounded-md border border-slate-200">
-                    <div class="flex items-center gap-1 text-[11px] font-bold text-slate-700">
-                        <span>🇯🇵</span>
-                        <span>日本語:</span>
-                        <span id="ja-speed-display" class="text-[11px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">1.00x</span>
+                <!-- Speaker A Speed Control Card -->
+                <div class="bg-white p-2 rounded-md border border-blue-200 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span id="speed-label-speaker-a" class="text-[11px] font-bold text-blue-900 flex items-center gap-1">
+                            <i class="fa-solid fa-user-tie text-[10px] text-blue-600"></i> 話者A (Person A)
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-semibold">範囲: 0.7x ~ 1.4x</span>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <button onclick="setJaSpeed(0.75)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700" data-speed="0.75">0.75x</button>
-                        <button onclick="setJaSpeed(1.0)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-rose-500 bg-rose-600 text-white" data-speed="1.0">1.0x</button>
-                        <button onclick="setJaSpeed(1.25)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700" data-speed="1.25">1.25x</button>
-                        <button onclick="setJaSpeed(1.5)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700" data-speed="1.5">1.5x</button>
+
+                    <!-- Speaker A Japanese Speed Slider -->
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center justify-between w-20 text-[10px] font-bold text-rose-700 shrink-0">
+                            <span>🇯🇵 日本語:</span>
+                            <span id="speed-val-a-ja" class="font-mono text-[11px] font-extrabold text-rose-600 bg-rose-50 px-1 rounded border border-rose-200">1.00x</span>
+                        </div>
+                        <input type="range" id="slider-speed-a-ja" min="0.7" max="1.4" step="0.05" value="1.0" oninput="onSpeedSliderChange('A', 'ja', this.value)" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-600">
+                    </div>
+
+                    <!-- Speaker A English Speed Slider -->
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center justify-between w-20 text-[10px] font-bold text-indigo-700 shrink-0">
+                            <span>🇺🇸 英語:</span>
+                            <span id="speed-val-a-en" class="font-mono text-[11px] font-extrabold text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-200">1.00x</span>
+                        </div>
+                        <input type="range" id="slider-speed-a-en" min="0.7" max="1.4" step="0.05" value="1.0" oninput="onSpeedSliderChange('A', 'en', this.value)" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
                     </div>
                 </div>
 
-                <!-- English Audio Speed -->
-                <div class="flex items-center justify-between gap-1.5 bg-white p-1.5 rounded-md border border-slate-200">
-                    <div class="flex items-center gap-1 text-[11px] font-bold text-slate-700">
-                        <span>🇺🇸</span>
-                        <span>英語:</span>
-                        <span id="en-speed-display" class="text-[11px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">1.00x</span>
+                <!-- Speaker B Speed Control Card -->
+                <div class="bg-white p-2 rounded-md border border-emerald-200 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span id="speed-label-speaker-b" class="text-[11px] font-bold text-emerald-900 flex items-center gap-1">
+                            <i class="fa-solid fa-user-gear text-[10px] text-emerald-600"></i> 話者B (Person B)
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-semibold">範囲: 0.7x ~ 1.4x</span>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <button onclick="setEnSpeed(0.75)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="0.75">0.75x</button>
-                        <button onclick="setEnSpeed(1.0)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-indigo-500 bg-indigo-600 text-white" data-speed="1.0">1.0x</button>
-                        <button onclick="setEnSpeed(1.25)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="1.25">1.25x</button>
-                        <button onclick="setEnSpeed(1.5)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="1.5">1.5x</button>
+
+                    <!-- Speaker B Japanese Speed Slider -->
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center justify-between w-20 text-[10px] font-bold text-rose-700 shrink-0">
+                            <span>🇯🇵 日本語:</span>
+                            <span id="speed-val-b-ja" class="font-mono text-[11px] font-extrabold text-rose-600 bg-rose-50 px-1 rounded border border-rose-200">1.00x</span>
+                        </div>
+                        <input type="range" id="slider-speed-b-ja" min="0.7" max="1.4" step="0.05" value="1.0" oninput="onSpeedSliderChange('B', 'ja', this.value)" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-600">
+                    </div>
+
+                    <!-- Speaker B English Speed Slider -->
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center justify-between w-20 text-[10px] font-bold text-emerald-700 shrink-0">
+                            <span>🇺🇸 英語:</span>
+                            <span id="speed-val-b-en" class="font-mono text-[11px] font-extrabold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-200">1.00x</span>
+                        </div>
+                        <input type="range" id="slider-speed-b-en" min="0.7" max="1.4" step="0.05" value="1.0" oninput="onSpeedSliderChange('B', 'en', this.value)" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
                     </div>
                 </div>
             </div>
@@ -200,9 +235,20 @@
                     </button>
                 </div>
 
-                <!-- Auto-scroll Toggle -->
-                <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                    <label class="flex items-center gap-1 cursor-pointer select-none">
+                <!-- Repeat Mode & Auto-scroll Controls -->
+                <div class="flex items-center gap-2.5 flex-wrap text-xs font-semibold text-slate-600">
+                    <div class="flex items-center gap-1">
+                        <label for="repeat-mode-select" class="text-slate-500 font-bold flex items-center gap-1 text-[11px]">
+                            <i class="fa-solid fa-repeat text-indigo-600"></i> ループ設定:
+                        </label>
+                        <select id="repeat-mode-select" onchange="setRepeatMode(this.value)" class="text-[11px] font-bold bg-white text-slate-700 px-2 py-1 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer shadow-xs">
+                            <option value="none">リピートなし (1回のみ)</option>
+                            <option value="content">🔂 このコンテンツをリピート</option>
+                            <option value="all">🔁 全コンテンツ通してリピート</option>
+                        </select>
+                    </div>
+
+                    <label class="flex items-center gap-1 cursor-pointer select-none border-l border-slate-200 pl-2">
                         <input type="checkbox" id="toggle-autoscroll" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                         <span>自動スクロール</span>
                     </label>
@@ -227,6 +273,93 @@
         </div>
 
     </main>
+
+    <!-- Modal: Audio File Export (Per-line MP3 & Combined WAV) -->
+    <div id="audio-export-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4 fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-file-audio text-amber-500"></i> 音声ファイル出力 (MP3 / WAV)
+                </h3>
+                <button onclick="closeExportAudioModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="bg-amber-50/70 border border-amber-200 p-3 rounded-xl space-y-1 text-xs">
+                <div class="flex items-center justify-between font-bold text-amber-950">
+                    <span>対象スクリプト:</span>
+                    <span id="export-script-title" class="text-indigo-700 truncate max-w-[200px]">--</span>
+                </div>
+                <div class="flex items-center justify-between text-slate-600 text-[11px]">
+                    <span>話者別設定速度:</span>
+                    <span id="export-speeds-info" class="font-mono font-bold text-slate-700">--</span>
+                </div>
+                <p class="text-[11px] text-slate-500 pt-1 border-t border-amber-200/60 leading-relaxed">
+                    ※各行の「1. 日本語 ➔ 2. 無音ポーズ ➔ 3. 英語」のセットを通し番号付き（No1-1, No1-2...）のMP3として生成します。
+                </p>
+            </div>
+
+            <!-- Export Mode Options -->
+            <div class="space-y-2.5">
+                <h4 class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders text-indigo-600"></i> 出力形式の選択
+                </h4>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <!-- Option 1: Per-Line MP3 Zip -->
+                    <button onclick="startBulkMp3ZipExport()" id="btn-export-zip" class="p-3 bg-white hover:bg-amber-50/80 border-2 border-amber-300 hover:border-amber-500 rounded-xl text-left transition group shadow-xs">
+                        <div class="font-bold text-xs text-amber-800 group-hover:text-amber-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-zipper text-amber-600 text-sm"></i> 通し番号別 MP3一括 (ZIP)
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1 leading-snug">
+                            全行を通し番号ごとに分割したMP3（No1-1.mp3, No1-2.mp3...）をZIPでまとめて保存
+                        </div>
+                    </button>
+
+                    <!-- Option 2: Full Combined WAV -->
+                    <button onclick="startAudioExport()" id="btn-start-export" class="p-3 bg-white hover:bg-indigo-50/80 border border-slate-300 hover:border-indigo-400 rounded-xl text-left transition group shadow-xs">
+                        <div class="font-bold text-xs text-indigo-700 group-hover:text-indigo-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-waveform text-indigo-600 text-sm"></i> 全行結合 WAV
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1 leading-snug">
+                            全会話行を最初から最後まで1本のオーディオトラックに結合して保存
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Area -->
+            <div id="export-progress-area" class="hidden space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div class="flex justify-between items-center text-xs font-bold">
+                    <span id="export-status-label" class="text-slate-700 flex items-center gap-1.5">
+                        <i class="fa-solid fa-spinner fa-spin text-amber-600"></i> 音声を生成中...
+                    </span>
+                    <span id="export-progress-pct" class="font-mono text-amber-700">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div id="export-progress-bar" class="bg-gradient-to-r from-amber-500 to-indigo-600 h-full transition-all duration-200" style="width: 0%"></div>
+                </div>
+                <div id="export-detail-label" class="text-[10px] text-slate-500 truncate">
+                    準備中...
+                </div>
+            </div>
+
+            <!-- Mini Audio Player for Preview -->
+            <div id="export-player-container" class="hidden space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <span class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <i class="fa-solid fa-circle-play text-emerald-600"></i> 生成音声の試聴:
+                </span>
+                <audio id="export-audio-player" controls class="w-full h-8"></audio>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeExportAudioModal()" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-xl border border-slate-300 text-xs">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notification Message -->
     <div id="toast-msg" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl z-50 text-xs font-bold flex items-center gap-2.5 transition-all border border-slate-700">
@@ -291,12 +424,12 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">話者A の名称</label>
-                        <input type="text" id="edit-speaker-a-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-medium">
+                        <label class="block font-bold text-slate-700 mb-1">話者A の名前</label>
+                        <input type="text" id="edit-speaker-a-input" placeholder="例: Person A" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">話者B の名称</label>
-                        <input type="text" id="edit-speaker-b-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-medium">
+                        <label class="block font-bold text-slate-700 mb-1">話者B の名前</label>
+                        <input type="text" id="edit-speaker-b-input" placeholder="例: Person B" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800">
                     </div>
                 </div>
             </div>
@@ -355,11 +488,11 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">話者A の名称</label>
+                        <label class="block font-bold text-slate-700 mb-1">話者A の名前</label>
                         <input type="text" id="modal-speaker-a" placeholder="例: Person A" value="Person A" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">話者B の名称</label>
+                        <label class="block font-bold text-slate-700 mb-1">話者B の名前</label>
                         <input type="text" id="modal-speaker-b" placeholder="例: Person B" value="Person B" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
                     </div>
                 </div>
@@ -537,32 +670,32 @@
             speakerA: 'Person A',
             speakerB: 'Person B',
             lines: [
-                { speaker: 'A', text: "Good morning, Gemini! I'd <span class=\"text-red-600 font-bold\">like to</span> practice my English with you today by having a short conversation.", ja: "おはよう、Gemini！今日は短い会話をして英語の練習をしたいです。" },
-                { speaker: 'B', text: "Good morning! I’d <span class=\"text-red-600 font-bold\">love to</span> help. How did you <span class=\"text-red-600 font-bold\">start your day</span> today?", ja: "おはようございます！ぜひお手伝いさせてください。今日はどのように一日を始めましたか？" },
+                { speaker: 'A', text: "Good morning, Gemini! I'd <span class=\"text-red-600 font-bold\">like to</span> practice my English with you today by having a short conversation.", ja: "おはよう、Gemini！今日は短い会話をして英語の練習を<span class=\"text-red-600 font-bold\">したいです</span>。" },
+                { speaker: 'B', text: "Good morning! I’d <span class=\"text-red-600 font-bold\">love to</span> help. How did you <span class=\"text-red-600 font-bold\">start your day</span> today?", ja: "おはようございます！<span class=\"text-red-600 font-bold\">ぜひ</span>お手伝いさせてください。今日はどのように<span class=\"text-red-600 font-bold\">一日を始めましたか</span>？" },
                 { speaker: 'A', text: "Actually, I’d like to talk about the movie Michael.", ja: "実は、映画『マイケル』について話したいんです。" },
-                { speaker: 'A', text: "When I was younger, I <span class=\"text-red-600 font-bold\">wasn't really interested in</span> his music or performance, but watching the movie after its release <span class=\"text-red-600 font-bold\">completely changed my perspective</span>.", ja: "若い頃は彼の音楽やパフォーマンスにあまり興味がなかったのですが、公開後に映画を見て見方が完全に変わりました。" },
-                { speaker: 'B', text: "It’s <span class=\"text-red-600 font-bold\">fascinating</span> how a film can <span class=\"text-red-600 font-bold\">change your view</span> like that!", ja: "映画がそんな風に見方を変えてくれるなんて魅力的ですね！" },
-                { speaker: 'B', text: "What <span class=\"text-red-600 font-bold\">specific aspects</span> of his life <span class=\"text-red-600 font-bold\">stood out to</span> you?", ja: "彼の人生のどんな部分が特に印象に残りましたか？" },
-                { speaker: 'A', text: "I was <span class=\"text-red-600 font-bold\">deeply touched by</span> his <span class=\"text-red-600 font-bold\">compassion</span> for children and how he <span class=\"text-red-600 font-bold\">frequently</span> visited hospitals to <span class=\"text-red-600 font-bold\">bring them joy</span>.", ja: "子供たちへの思いやりや、彼らを喜ばせるために頻繁に病院を訪れていたことに深く感動しました。" },
-                { speaker: 'A', text: "Besides his personality, his <span class=\"text-red-600 font-bold\">incredible</span> dancing really <span class=\"text-red-600 font-bold\">captured my attention</span>.", ja: "彼の人柄だけでなく、彼の素晴らしいダンスにも本当に心を奪われました。" },
-                { speaker: 'B', text: "Jaafar Jackson’s <span class=\"text-red-600 font-bold\">portrayal</span> really <span class=\"text-red-600 font-bold\">brought those iconic moves to life</span> on screen, didn't he?", ja: "ジャファー・ジャクソンの演技は、スクリーン上でそれらの象徴的な動きを見事に蘇らせていましたよね？" },
-                { speaker: 'A', text: "<span class=\"text-red-600 font-bold\">Absolutely!</span>", ja: "その通りです！" },
-                { speaker: 'A', text: "His performance as Michael was <span class=\"text-red-600 font-bold\">so</span> impressive <span class=\"text-red-600 font-bold\">that</span> it <span class=\"text-red-600 font-bold\">actually</span> <span class=\"text-red-600 font-bold\">inspired me to</span> start practicing.", ja: "マイケル役としての彼のパフォーマンスはとても印象的で、実際に私も練習を始めるきっかけになりました。" },
-                { speaker: 'A', text: "The intro to Billie Jean was so cool that I <span class=\"text-red-600 font-bold\">even</span> bought a <span class=\"text-red-600 font-bold\">fedora hat</span> to practice the pose <span class=\"text-red-600 font-bold\">myself</span>.", ja: "『ビリー・ジーン』のイントロがすごく格好良かったので、自分でもポーズを練習するためにフェドーラハットを買ってしまったくらいです。" },
-                { speaker: 'B', text: "That’s <span class=\"text-red-600 font-bold\">awesome!</span>", ja: "それは素晴らしいですね！" },
-                { speaker: 'B', text: "Having the <span class=\"text-red-600 font-bold\">right</span> hat <span class=\"text-red-600 font-bold\">definitely</span> makes practice more <span class=\"text-red-600 font-bold\">exciting</span>.", ja: "ぴったりの帽子があると練習がさらに楽しくなりますね。" },
-                { speaker: 'B', text: "Have you been <span class=\"text-red-600 font-bold\">working on</span> any <span class=\"text-red-600 font-bold\">specific</span> techniques?", ja: "何か具体的なテクニックに取り組んでいますか？" },
-                { speaker: 'A', text: "Yes, I’ve been <span class=\"text-red-600 font-bold\">practicing</span> body <span class=\"text-red-600 font-bold\">isolations</span> for about two months now.", ja: "はい、もう2ヶ月ほどボディ・アイソレーションの練習をしています。" },
-                { speaker: 'A', text: "It’s <span class=\"text-red-600 font-bold\">tough</span> to <span class=\"text-red-600 font-bold\">control</span> each part <span class=\"text-red-600 font-bold\">independently</span>, but I <span class=\"text-red-600 font-bold\">noticed</span> an <span class=\"text-red-600 font-bold\">unexpected benefit</span>:", ja: "各部位を独立してコントロールするのは難しいですが、予想外の効果に気づきました。" },
-                { speaker: 'A', text: "It makes my brain feel <span class=\"text-red-600 font-bold\">super sharp</span> and <span class=\"text-red-600 font-bold\">focused</span>.", ja: "脳がとても冴えて集中できるように感じるんです。" },
-                { speaker: 'B', text: "That <span class=\"text-red-600 font-bold\">makes total sense!</span>", ja: "完全に納得です！" },
-                { speaker: 'B', text: "Physical control <span class=\"text-red-600 font-bold\">requires</span> <span class=\"text-red-600 font-bold\">deep concentration</span>.", ja: "身体のコントロールには深い集中力が必要ですものね。" },
-                { speaker: 'B', text: "Does that <span class=\"text-red-600 font-bold\">mental clarity</span> feel <span class=\"text-red-600 font-bold\">familiar</span> to you?", ja: "その頭の冴えは、何か聞き覚えのある感覚ですか？" },
-                { speaker: 'A', text: "<span class=\"text-red-600 font-bold\">Exactly.</span>", ja: "その通りです。" },
-                { speaker: 'A', text: "As a <span class=\"text-red-600 font-bold\">trail runner</span>, I always <span class=\"text-red-600 font-bold\">get that clear-minded, motivated feeling</span> after a long run, and <span class=\"text-red-600 font-bold\">isolation training</span> gives me a <span class=\"text-red-600 font-bold\">very similar boost</span>.", ja: "トレイルランナーとして、長距離を走った後はいつも頭がすっきりしてモチベーションが高まる感覚があるのですが、アイソレーショントレーニングも非常に似た良い影響を与えてくれます。" },
-                { speaker: 'A', text: "With my <span class=\"text-red-600 font-bold\">athletic endurance</span> and <span class=\"text-red-600 font-bold\">consistent practice</span>, I’m <span class=\"text-red-600 font-bold\">confident</span> I’ll <span class=\"text-red-600 font-bold\">master</span> his <span class=\"text-red-600 font-bold\">signature moves</span> <span class=\"text-red-600 font-bold\">eventually!</span>", ja: "運動で培った持久力と継続的な練習があれば、いつか彼の代表的な動きをマスターできると確信しています！" },
-                { speaker: 'B', text: "With that <span class=\"text-red-600 font-bold\">level of dedication</span>, you’ll <span class=\"text-red-600 font-bold\">definitely</span> get there.", ja: "それほどの熱意があれば、絶対に達成できますよ。" },
-                { speaker: 'B', text: "<span class=\"text-red-600 font-bold\">Keep up the great work</span>, and have a <span class=\"text-red-600 font-bold\">wonderful day</span> at work!", ja: "その調子で頑張ってください。今日もお仕事頑張ってくださいね！" }
+                { speaker: 'A', text: "When I was younger, I <span class=\"text-red-600 font-bold\">wasn't really interested in</span> his music or performance, but watching the movie after its release <span class=\"text-red-600 font-bold\">completely changed my perspective</span>.", ja: "若い頃は彼の音楽やパフォーマンスに<span class=\"text-red-600 font-bold\">あまり興味がなかった</span>のですが、公開後に映画を見て<span class=\"text-red-600 font-bold\">見方が完全に変わりました</span>。" },
+                { speaker: 'B', text: "It’s <span class=\"text-red-600 font-bold\">fascinating</span> how a film can <span class=\"text-red-600 font-bold\">change your view</span> like that!", ja: "映画がそんな風に<span class=\"text-red-600 font-bold\">見方を変えてくれる</span>なんて<span class=\"text-red-600 font-bold\">魅力的ですね</span>！" },
+                { speaker: 'B', text: "What <span class=\"text-red-600 font-bold\">specific aspects</span> of his life <span class=\"text-red-600 font-bold\">stood out to</span> you?", ja: "彼の人生のどんな<span class=\"text-red-600 font-bold\">具体的な部分</span>が特に<span class=\"text-red-600 font-bold\">印象に残りました</span>か？" },
+                { speaker: 'A', text: "I was <span class=\"text-red-600 font-bold\">deeply touched by</span> his <span class=\"text-red-600 font-bold\">compassion</span> for children and how he <span class=\"text-red-600 font-bold\">frequently</span> visited hospitals to <span class=\"text-red-600 font-bold\">bring them joy</span>.", ja: "子供たちへの<span class=\"text-red-600 font-bold\">思いやり</span>や、彼らを<span class=\"text-red-600 font-bold\">喜ばせる</span>ために<span class=\"text-red-600 font-bold\">頻繁に</span>病院を訪れていたことに<span class=\"text-red-600 font-bold\">深く感動しました</span>。" },
+                { speaker: 'A', text: "Besides his personality, his <span class=\"text-red-600 font-bold\">incredible</span> dancing really <span class=\"text-red-600 font-bold\">captured my attention</span>.", ja: "彼の人柄だけでなく、彼の<span class=\"text-red-600 font-bold\">素晴らしい</span>ダンスにも本当に<span class=\"text-red-600 font-bold\">心を奪われました</span>。" },
+                { speaker: 'B', text: "Jaafar Jackson’s <span class=\"text-red-600 font-bold\">portrayal</span> really <span class=\"text-red-600 font-bold\">brought those iconic moves to life</span> on screen, didn't he?", ja: "ジャファー・ジャクソンの<span class=\"text-red-600 font-bold\">演技</span>は、スクリーン上でそれらの象徴的な動きを<span class=\"text-red-600 font-bold\">見事に蘇らせていました</span>よね？" },
+                { speaker: 'A', text: "<span class=\"text-red-600 font-bold\">Absolutely!</span>", ja: "<span class=\"text-red-600 font-bold\">その通りです！</span>" },
+                { speaker: 'A', text: "His performance as Michael was <span class=\"text-red-600 font-bold\">so</span> impressive <span class=\"text-red-600 font-bold\">that</span> it <span class=\"text-red-600 font-bold\">actually</span> <span class=\"text-red-600 font-bold\">inspired me to</span> start practicing.", ja: "マイケル役としての彼のパフォーマンスは<span class=\"text-red-600 font-bold\">とても</span>印象的<span class=\"text-red-600 font-bold\">だったため</span>、<span class=\"text-red-600 font-bold\">実際に</span>私も練習を始める<span class=\"text-red-600 font-bold\">きっかけになりました</span>。" },
+                { speaker: 'A', text: "The intro to Billie Jean was so cool that I <span class=\"text-red-600 font-bold\">even</span> bought a <span class=\"text-red-600 font-bold\">fedora hat</span> to practice the pose <span class=\"text-red-600 font-bold\">myself</span>.", ja: "『ビリー・ジーン』のイントロがすごく格好良かったので、<span class=\"text-red-600 font-bold\">自分でも</span>ポーズを練習するために<span class=\"text-red-600 font-bold\">フェドーラハット</span>を買ってしまった<span class=\"text-red-600 font-bold\">くらいです</span>。" },
+                { speaker: 'B', text: "That’s <span class=\"text-red-600 font-bold\">awesome!</span>", ja: "それは<span class=\"text-red-600 font-bold\">素晴らしいですね！</span>" },
+                { speaker: 'B', text: "Having the <span class=\"text-red-600 font-bold\">right</span> hat <span class=\"text-red-600 font-bold\">definitely</span> makes practice more <span class=\"text-red-600 font-bold\">exciting</span>.", ja: "<span class=\"text-red-600 font-bold\">ぴったりの</span>帽子があると<span class=\"text-red-600 font-bold\">間違いなく</span>練習がさらに<span class=\"text-red-600 font-bold\">楽しくなります</span>ね。" },
+                { speaker: 'B', text: "Have you been <span class=\"text-red-600 font-bold\">working on</span> any <span class=\"text-red-600 font-bold\">specific</span> techniques?", ja: "何か<span class=\"text-red-600 font-bold\">具体的な</span>テクニックに<span class=\"text-red-600 font-bold\">取り組んで</span>いますか？" },
+                { speaker: 'A', text: "Yes, I’ve been <span class=\"text-red-600 font-bold\">practicing</span> body <span class=\"text-red-600 font-bold\">isolations</span> for about two months now.", ja: "はい、もう2ヶ月ほどボディ・<span class=\"text-red-600 font-bold\">アイソレーション</span>の<span class=\"text-red-600 font-bold\">練習をして</span>います。" },
+                { speaker: 'A', text: "It’s <span class=\"text-red-600 font-bold\">tough</span> to <span class=\"text-red-600 font-bold\">control</span> each part <span class=\"text-red-600 font-bold\">independently</span>, but I <span class=\"text-red-600 font-bold\">noticed</span> an <span class=\"text-red-600 font-bold\">unexpected benefit</span>:", ja: "各部位を<span class=\"text-red-600 font-bold\">独立して</span><span class=\"text-red-600 font-bold\">コントロールする</span>のは<span class=\"text-red-600 font-bold\">難しい</span>ですが、<span class=\"text-red-600 font-bold\">予想外の効果</span>に<span class=\"text-red-600 font-bold\">気づきました</span>。" },
+                { speaker: 'A', text: "It makes my brain feel <span class=\"text-red-600 font-bold\">super sharp</span> and <span class=\"text-red-600 font-bold\">focused</span>.", ja: "脳が<span class=\"text-red-600 font-bold\">とても冴えて</span><span class=\"text-red-600 font-bold\">集中できる</span>ように感じるんです。" },
+                { speaker: 'B', text: "That <span class=\"text-red-600 font-bold\">makes total sense!</span>", ja: "それは<span class=\"text-red-600 font-bold\">完全に納得です！</span>" },
+                { speaker: 'B', text: "Physical control <span class=\"text-red-600 font-bold\">requires</span> <span class=\"text-red-600 font-bold\">deep concentration</span>.", ja: "身体のコントロールには<span class=\"text-red-600 font-bold\">深い集中力</span>が<span class=\"text-red-600 font-bold\">必要です</span>ものね。" },
+                { speaker: 'B', text: "Does that <span class=\"text-red-600 font-bold\">mental clarity</span> feel <span class=\"text-red-600 font-bold\">familiar</span> to you?", ja: "その<span class=\"text-red-600 font-bold\">頭の冴え</span>は、何か<span class=\"text-red-600 font-bold\">聞き覚えのある</span>感覚ですか？" },
+                { speaker: 'A', text: "<span class=\"text-red-600 font-bold\">Exactly.</span>", ja: "<span class=\"text-red-600 font-bold\">その通りです。</span>" },
+                { speaker: 'A', text: "As a <span class=\"text-red-600 font-bold\">trail runner</span>, I always <span class=\"text-red-600 font-bold\">get that clear-minded, motivated feeling</span> after a long run, and <span class=\"text-red-600 font-bold\">isolation training</span> gives me a <span class=\"text-red-600 font-bold\">very similar boost</span>.", ja: "<span class=\"text-red-600 font-bold\">トレイルランナー</span>として、長距離を走った後はいつも<span class=\"text-red-600 font-bold\">頭がすっきりしてモチベーションが高まる感覚があり</span>、<span class=\"text-red-600 font-bold\">アイソレーショントレーニング</span>も<span class=\"text-red-600 font-bold\">非常に似た良い影響</span>を与えてくれます。" },
+                { speaker: 'A', text: "With my <span class=\"text-red-600 font-bold\">athletic endurance</span> and <span class=\"text-red-600 font-bold\">consistent practice</span>, I’m <span class=\"text-red-600 font-bold\">confident</span> I’ll <span class=\"text-red-600 font-bold\">master</span> his <span class=\"text-red-600 font-bold\">signature moves</span> <span class=\"text-red-600 font-bold\">eventually!</span>", ja: "運動で培った<span class=\"text-red-600 font-bold\">持久力</span>と<span class=\"text-red-600 font-bold\">継続的な練習</span>があれば、<span class=\"text-red-600 font-bold\">いつか</span>彼の<span class=\"text-red-600 font-bold\">代表的な動き</span>を<span class=\"text-red-600 font-bold\">マスター</span>できると<span class=\"text-red-600 font-bold\">確信しています</span>！" },
+                { speaker: 'B', text: "With that <span class=\"text-red-600 font-bold\">level of dedication</span>, you’ll <span class=\"text-red-600 font-bold\">definitely</span> get there.", ja: "それほどの<span class=\"text-red-600 font-bold\">熱意</span>があれば、<span class=\"text-red-600 font-bold\">絶対に</span>達成できますよ。" },
+                { speaker: 'B', text: "<span class=\"text-red-600 font-bold\">Keep up the great work</span>, and have a <span class=\"text-red-600 font-bold\">wonderful day</span> at work!", ja: "<span class=\"text-red-600 font-bold\">その調子で頑張ってください</span>。今日もお仕事で<span class=\"text-red-600 font-bold\">素晴らしい一日</span>を！" }
             ]
         };
 
@@ -572,18 +705,18 @@
             speakerA: 'ランナー (Runner)',
             speakerB: 'コーチ (Coach)',
             lines: [
-                { speaker: 'A', text: "So, I <span class=\"text-red-600 font-bold\">participated in</span> a trail running race around the Togakushi Ski Resort in Nagano last weekend, and I’d <span class=\"text-red-600 font-bold\">love to</span> tell you about it.", ja: "先週末、長野県の戸隠スキー場周辺で行われたトレイルランニングの大会に出てきたんですけども、その時のお話をさせてください。" },
-                { speaker: 'B', text: "I’d <span class=\"text-red-600 font-bold\">love to</span> hear <span class=\"text-red-600 font-bold\">all about it!</span> How did it go?", ja: "ぜひ聞かせてください。トレランの大会、素晴らしいですね。どうでしたか？" },
-                { speaker: 'A', text: "Well, since it’s early September, it was still <span class=\"text-red-600 font-bold\">pretty hot</span>, so I was <span class=\"text-red-600 font-bold\">worried about</span> my stamina. <span class=\"text-red-600 font-bold\">On top of that</span>, it rained <span class=\"text-red-600 font-bold\">until</span> the day before, so the trail was <span class=\"text-red-600 font-bold\">super muddy</span>.", ja: "まだ9月の始めという暑い時期なので、まずは体力が持つか心配でした。それに加えてレース前日まで雨が降っていて、コースがだいぶぐちゃぐちゃになることが予想されたので、それも心配でした。" },
-                { speaker: 'B', text: "Oh, that sounds tough! Did you <span class=\"text-red-600 font-bold\">manage to</span> finish <span class=\"text-red-600 font-bold\">okay?</span>", ja: "それは大変そうですね！無事に完走できたんでしょうか？" },
-                { speaker: 'A', text: "I <span class=\"text-red-600 font-bold\">actually</span> did! And my time was <span class=\"text-red-600 font-bold\">surprisingly good</span>. <span class=\"text-red-600 font-bold\">Honestly</span>, I was <span class=\"text-red-600 font-bold\">a bit</span> worried because I’d been <span class=\"text-red-600 font-bold\">doing</span> Maffetone training <span class=\"text-red-600 font-bold\">since</span> June—running at a very slow pace while <span class=\"text-red-600 font-bold\">keeping</span> my heart rate <span class=\"text-red-600 font-bold\">under</span> 130 bpm, <span class=\"text-red-600 font-bold\">along with</span> limiting carbs. I was nervous about whether I could <span class=\"text-red-600 font-bold\">actually</span> speed up or last through the race.", ja: "無事に完走できました！しかもタイムは驚くほど良かったです。実は6月からマフェトントレーニングをやらせてもらっていて、炭水化物を控えた上ですごいスローペース（心拍数130以下）で走るトレーニングを続けていたので、スピードが出せるのか、体力が持つか心配でした。" },
-                { speaker: 'B', text: "That <span class=\"text-red-600 font-bold\">low-intensity</span> training <span class=\"text-red-600 font-bold\">takes time to</span> show results, so I <span class=\"text-red-600 font-bold\">totally get</span> your anxiety. But your body <span class=\"text-red-600 font-bold\">clearly adapted!</span>", ja: "低強度のトレーニングは効果が出るまでに時間がかかるので、その不安は本当によくわかります。でも体がしっかり順応したんですね！" },
-                { speaker: 'A', text: "Right! I <span class=\"text-red-600 font-bold\">even</span> lost about 4 kg, so I brought <span class=\"text-red-600 font-bold\">a lot of</span> energy gels, but I <span class=\"text-red-600 font-bold\">ended up</span> taking <span class=\"text-red-600 font-bold\">less than</span> half of what I planned. I even had enough energy left to <span class=\"text-red-600 font-bold\">sprint</span> right before the <span class=\"text-red-600 font-bold\">finish line</span>.", ja: "そうですね！体重も4kgぐらい減ったので補給食（ジェル）をたくさん持っていったのですが、結局予定していた量の半分も食べずに済みました。ゴールラインを切る直前にはダッシュができるくらいの余力もありました。" },
-                { speaker: 'B', text: "That means your body became <span class=\"text-red-600 font-bold\">incredibly efficient</span> at <span class=\"text-red-600 font-bold\">burning fat</span> for fuel. Your pacing was <span class=\"text-red-600 font-bold\">spot on!</span>", ja: "それは体が脂肪をエネルギーとして効率よく燃焼できるようになった証拠ですね！ペース配分も完璧でした。" },
-                { speaker: 'A', text: "Thanks. <span class=\"text-red-600 font-bold\">Next up</span>, I have a 230 km ultra-race <span class=\"text-red-600 font-bold\">coming up</span> in early October, so I want to <span class=\"text-red-600 font-bold\">keep this momentum going</span>. But with that kind of distance, I’m wondering what my target heart rate should be.", ja: "ありがとうございます。次は10月上旬に230kmの超長距離レースがあるので、この勢いを維持したいと思っています。ただ、それほどの距離になると心拍数はどのくらいで走ればいいのかちょっと心配です。" },
-                { speaker: 'B', text: "For 230 kilometers, <span class=\"text-red-600 font-bold\">staying in</span> Zone 2—<span class=\"text-red-600 font-bold\">around</span> 60 to 70 percent of your maximum heart rate, or <span class=\"text-red-600 font-bold\">roughly</span> 120 to 130 bpm—is <span class=\"text-red-600 font-bold\">ideal</span>. It <span class=\"text-red-600 font-bold\">keeps you in</span> a <span class=\"text-red-600 font-bold\">conversational pace</span> while <span class=\"text-red-600 font-bold\">saving energy</span>.", ja: "230kmという距離なら、ゾーン2（最大心拍数のおよそ60〜70%、約120〜130bpm）を維持するのが理想的です。エネルギーを節約しつつ、会話ができるペースを保つことができます。" },
-                { speaker: 'A', text: "Got it. I’ll <span class=\"text-red-600 font-bold\">aim for</span> Zone 2 and <span class=\"text-red-600 font-bold\">give it my best shot</span>. Thanks for the advice!", ja: "分かりました。ゾーン2を目指して全力を尽くしてみたいと思います。アドバイスありがとうございます！" },
-                { speaker: 'B', text: "<span class=\"text-red-600 font-bold\">Best of luck with</span> your training! You’re going to <span class=\"text-red-600 font-bold\">do great</span>.", ja: "トレーニング頑張ってください！応援しています！" }
+                { speaker: 'A', text: "So, I <span class=\"text-red-600 font-bold\">participated in</span> a trail running race around the Togakushi Ski Resort in Nagano last weekend, and I’d <span class=\"text-red-600 font-bold\">love to</span> tell you about it.", ja: "先週末、長野県の戸隠スキー場周辺で行われたトレイルランニングの大会に<span class=\"text-red-600 font-bold\">参加してきた</span>んですけども、その時のお話を<span class=\"text-red-600 font-bold\">ぜひ</span>させてください。" },
+                { speaker: 'B', text: "I’d <span class=\"text-red-600 font-bold\">love to</span> hear <span class=\"text-red-600 font-bold\">all about it!</span> How did it go?", ja: "<span class=\"text-red-600 font-bold\">ぜひ</span><span class=\"text-red-600 font-bold\">詳しく</span>聞かせてください！トレランの大会、素晴らしいですね。どうでしたか？" },
+                { speaker: 'A', text: "Well, since it’s early September, it was still <span class=\"text-red-600 font-bold\">pretty hot</span>, so I was <span class=\"text-red-600 font-bold\">worried about</span> my stamina. <span class=\"text-red-600 font-bold\">On top of that</span>, it rained <span class=\"text-red-600 font-bold\">until</span> the day before, so the trail was <span class=\"text-red-600 font-bold\">super muddy</span>.", ja: "まだ9月の始めという<span class=\"text-red-600 font-bold\">かなり暑い</span>時期なので、体力が持つか<span class=\"text-red-600 font-bold\">心配でした</span>。<span class=\"text-red-600 font-bold\">それに加えて</span>レース前日<span class=\"text-red-600 font-bold\">まで</span>雨が降っていて、コースが<span class=\"text-red-600 font-bold\">ものすごくぬかるんで</span>しまうことも心配でした。" },
+                { speaker: 'B', text: "Oh, that sounds tough! Did you <span class=\"text-red-600 font-bold\">manage to</span> finish <span class=\"text-red-600 font-bold\">okay?</span>", ja: "それは大変そうですね！<span class=\"text-red-600 font-bold\">どうにか</span><span class=\"text-red-600 font-bold\">無事に</span>完走できたんでしょうか？" },
+                { speaker: 'A', text: "I <span class=\"text-red-600 font-bold\">actually</span> did! And my time was <span class=\"text-red-600 font-bold\">surprisingly good</span>. <span class=\"text-red-600 font-bold\">Honestly</span>, I was <span class=\"text-red-600 font-bold\">a bit</span> worried because I’d been <span class=\"text-red-600 font-bold\">doing</span> Maffetone training <span class=\"text-red-600 font-bold\">since</span> June—running at a very slow pace while <span class=\"text-red-600 font-bold\">keeping</span> my heart rate <span class=\"text-red-600 font-bold\">under</span> 130 bpm, <span class=\"text-red-600 font-bold\">along with</span> limiting carbs. I was nervous about whether I could <span class=\"text-red-600 font-bold\">actually</span> speed up or last through the race.", ja: "<span class=\"text-red-600 font-bold\">実は</span>無事に完走できました！しかもタイムは<span class=\"text-red-600 font-bold\">驚くほど良かったです</span>。<span class=\"text-red-600 font-bold\">正直なところ</span>、6月<span class=\"text-red-600 font-bold\">から</span>炭水化物を控えるの<span class=\"text-red-600 font-bold\">と合わせて</span>心拍数を130<span class=\"text-red-600 font-bold\">以下</span>に<span class=\"text-red-600 font-bold\">維持しながら</span>超スローペースで走るマフェトントレーニングを<span class=\"text-red-600 font-bold\">実践していた</span>ので、スピードが出せるか、体力が持つか<span class=\"text-red-600 font-bold\">少し</span>心配でした。<span class=\"text-red-600 font-bold\">実際に</span>走れるか不安だったんです。" },
+                { speaker: 'B', text: "That <span class=\"text-red-600 font-bold\">low-intensity</span> training <span class=\"text-red-600 font-bold\">takes time to</span> show results, so I <span class=\"text-red-600 font-bold\">totally get</span> your anxiety. But your body <span class=\"text-red-600 font-bold\">clearly adapted!</span>", ja: "<span class=\"text-red-600 font-bold\">低強度</span>のトレーニングは効果が出るまでに<span class=\"text-red-600 font-bold\">時間がかかる</span>ので、その不安は<span class=\"text-red-600 font-bold\">本当によく分かります</span>。でも体が<span class=\"text-red-600 font-bold\">しっかり順応した</span>んですね！" },
+                { speaker: 'A', text: "Right! I <span class=\"text-red-600 font-bold\">even</span> lost about 4 kg, so I brought <span class=\"text-red-600 font-bold\">a lot of</span> energy gels, but I <span class=\"text-red-600 font-bold\">ended up</span> taking <span class=\"text-red-600 font-bold\">less than</span> half of what I planned. I even had enough energy left to <span class=\"text-red-600 font-bold\">sprint</span> right before the <span class=\"text-red-600 font-bold\">finish line</span>.", ja: "そうですね！体重も4kg減った<span class=\"text-red-600 font-bold\">ほど</span>で、補給ジェルを<span class=\"text-red-600 font-bold\">たくさん</span>持っていったのですが、<span class=\"text-red-600 font-bold\">結局</span>予定の半分<span class=\"text-red-600 font-bold\">未満</span>しか食べずに済みました。<span class=\"text-red-600 font-bold\">ゴールライン</span>を切る直前には<span class=\"text-red-600 font-bold\">ダッシュ</span>ができるほどの余力すらありました。" },
+                { speaker: 'B', text: "That means your body became <span class=\"text-red-600 font-bold\">incredibly efficient</span> at <span class=\"text-red-600 font-bold\">burning fat</span> for fuel. Your pacing was <span class=\"text-red-600 font-bold\">spot on!</span>", ja: "それは体がエネルギーとして<span class=\"text-red-600 font-bold\">脂肪を燃焼する</span>のが<span class=\"text-red-600 font-bold\">驚くほど効率的</span>になった証拠ですね！ペース配分も<span class=\"text-red-600 font-bold\">完璧</span>でした！" },
+                { speaker: 'A', text: "Thanks. <span class=\"text-red-600 font-bold\">Next up</span>, I have a 230 km ultra-race <span class=\"text-red-600 font-bold\">coming up</span> in early October, so I want to <span class=\"text-red-600 font-bold\">keep this momentum going</span>. But with that kind of distance, I’m wondering what my target heart rate should be.", ja: "ありがとうございます。<span class=\"text-red-600 font-bold\">次は</span>10月上旬に230kmの超長距離レースが<span class=\"text-red-600 font-bold\">控えている</span>ので、<span class=\"text-red-600 font-bold\">この勢いを維持したい</span>と思っています。ただ、それほどの距離になると目標心拍数はどのくらいで走ればいいのかちょっと心配です。" },
+                { speaker: 'B', text: "For 230 kilometers, <span class=\"text-red-600 font-bold\">staying in</span> Zone 2—<span class=\"text-red-600 font-bold\">around</span> 60 to 70 percent of your maximum heart rate, or <span class=\"text-red-600 font-bold\">roughly</span> 120 to 130 bpm—is <span class=\"text-red-600 font-bold\">ideal</span>. It <span class=\"text-red-600 font-bold\">keeps you in</span> a <span class=\"text-red-600 font-bold\">conversational pace</span> while <span class=\"text-red-600 font-bold\">saving energy</span>.", ja: "230kmという距離なら、最大心拍数のおよそ60〜70%<span class=\"text-red-600 font-bold\">前後</span>、つまり<span class=\"text-red-600 font-bold\">約</span>120〜130bpmのゾーン2を<span class=\"text-red-600 font-bold\">維持すること</span>が<span class=\"text-red-600 font-bold\">理想的</span>です。<span class=\"text-red-600 font-bold\">エネルギーを節約し</span>つつ、<span class=\"text-red-600 font-bold\">会話ができるペース</span>を<span class=\"text-red-600 font-bold\">保つ</span>ことができます。" },
+                { speaker: 'A', text: "Got it. I’ll <span class=\"text-red-600 font-bold\">aim for</span> Zone 2 and <span class=\"text-red-600 font-bold\">give it my best shot</span>. Thanks for the advice!", ja: "分かりました。ゾーン2を<span class=\"text-red-600 font-bold\">目指して</span>、<span class=\"text-red-600 font-bold\">全力を尽くしてみたい</span>と思います。アドバイスありがとうございます！" },
+                { speaker: 'B', text: "<span class=\"text-red-600 font-bold\">Best of luck with</span> your training! You’re going to <span class=\"text-red-600 font-bold\">do great</span>.", ja: "トレーニングの<span class=\"text-red-600 font-bold\">成功を祈っています</span>！きっと<span class=\"text-red-600 font-bold\">大成功します</span>よ。" }
             ]
         };
 
@@ -595,10 +728,14 @@
         var currentLineIndex = -1;
         var isPlaying = false;
         
-        // Independent playback speeds
-        var currentJaSpeed = 1.0;
-        var currentEnSpeed = 1.0;
+        // Independent playback speeds for Speaker A & Speaker B (Range 0.7 ~ 1.4)
+        var speedA_JA = 1.0;
+        var speedA_EN = 1.0;
+        var speedB_JA = 1.0;
+        var speedB_EN = 1.0;
+
         var currentPauseMultiplier = 1.0; // 1.0倍固定
+        var contentRepeatMode = 'none'; // 'none', 'content', 'all'
 
         var currentSequenceStep = 'IDLE'; // 'IDLE', 'JA', 'PAUSE', 'EN'
         var pauseTimerId = null;
@@ -632,8 +769,11 @@
             try {
                 localStorage.setItem('trainer_scripts_data_v2', JSON.stringify(scriptsList));
                 localStorage.setItem('trainer_current_script_id', currentScriptId);
-                localStorage.setItem('trainer_ja_speed', currentJaSpeed.toString());
-                localStorage.setItem('trainer_en_speed', currentEnSpeed.toString());
+                localStorage.setItem('trainer_speed_A_JA', speedA_JA.toString());
+                localStorage.setItem('trainer_speed_A_EN', speedA_EN.toString());
+                localStorage.setItem('trainer_speed_B_JA', speedB_JA.toString());
+                localStorage.setItem('trainer_speed_B_EN', speedB_EN.toString());
+                localStorage.setItem('trainer_repeat_mode', contentRepeatMode);
                 
                 saveVoiceSettingsToStorage();
                 
@@ -661,8 +801,11 @@
                     currentScriptId = savedScriptId;
                 }
 
-                currentJaSpeed = parseFloat(localStorage.getItem('trainer_ja_speed') || '1.0');
-                currentEnSpeed = parseFloat(localStorage.getItem('trainer_en_speed') || '1.0');
+                speedA_JA = parseFloat(localStorage.getItem('trainer_speed_A_JA') || '1.0');
+                speedA_EN = parseFloat(localStorage.getItem('trainer_speed_A_EN') || '1.0');
+                speedB_JA = parseFloat(localStorage.getItem('trainer_speed_B_JA') || '1.0');
+                speedB_EN = parseFloat(localStorage.getItem('trainer_speed_B_EN') || '1.0');
+                contentRepeatMode = localStorage.getItem('trainer_repeat_mode') || 'none';
 
                 loadVoiceSettingsFromStorage();
             } catch (e) {
@@ -683,10 +826,21 @@
 
         function loadVoiceSettingsFromStorage() {
             try {
-                selectedVoiceA_EN_URI = localStorage.getItem('trainer_voice_A_EN') || '';
-                selectedVoiceA_JA_URI = localStorage.getItem('trainer_voice_A_JA') || '';
-                selectedVoiceB_EN_URI = localStorage.getItem('trainer_voice_B_EN') || '';
-                selectedVoiceB_JA_URI = localStorage.getItem('trainer_voice_B_JA') || '';
+                // デフォルト音声の変更（A:男性, B:女性）を確実に反映するためのバージョン管理
+                var voiceDefaultVer = localStorage.getItem('trainer_voice_default_ver');
+                if (voiceDefaultVer !== 'v3_a_male_b_female') {
+                    selectedVoiceA_EN_URI = '';
+                    selectedVoiceA_JA_URI = '';
+                    selectedVoiceB_EN_URI = '';
+                    selectedVoiceB_JA_URI = '';
+                    localStorage.setItem('trainer_voice_default_ver', 'v3_a_male_b_female');
+                    saveVoiceSettingsToStorage();
+                } else {
+                    selectedVoiceA_EN_URI = localStorage.getItem('trainer_voice_A_EN') || '';
+                    selectedVoiceA_JA_URI = localStorage.getItem('trainer_voice_A_JA') || '';
+                    selectedVoiceB_EN_URI = localStorage.getItem('trainer_voice_B_EN') || '';
+                    selectedVoiceB_JA_URI = localStorage.getItem('trainer_voice_B_JA') || '';
+                }
             } catch (e) {
                 console.error("Voice settings load failed:", e);
             }
@@ -700,18 +854,69 @@
         function isHighQualityVoice(voice) {
             if (!voice || !voice.name) return false;
             var name = voice.name.toLowerCase();
-            var hqKeywords = ['natural', 'enhanced', 'premium', 'google', 'neural', 'online', 'wavenet', 'high quality', 'studio', 'deep', 'multilingual', 'expressive'];
+            var hqKeywords = [
+                'natural', 'enhanced', 'premium', 'google', 'neural', 'online', 
+                'wavenet', 'high quality', 'studio', 'deep', 'multilingual', 'expressive',
+                'siri', 'ayumi', 'haruka', 'nanami', 'kyoko', 'sayaka'
+            ];
             return hqKeywords.some(function(kw) { return name.includes(kw); });
         }
 
         function detectVoiceGender(voice) {
             if (!voice || !voice.name) return '不明';
             var name = voice.name.toLowerCase();
-            var femaleKeywords = ['samantha', 'zira', 'victoria', 'aria', 'jenny', 'michelle', 'eva', 'fiona', 'joanna', 'female', 'woman', 'susan', 'karen', 'catherine', 'hazel', 'linda', 'amy', 'emma', 'stephanie', 'kyoko', 'otoya', 'nanami', 'aoi', 'mayu', 'sakura', 'haruka', 'sayaka', 'yuri', 'misaki', 'natasha', 'sara', 'lisa', 'moira', 'veena', 'tessa', 'vicki', 'alice', 'allison', 'ava', 'serena', 'claire'];
-            var maleKeywords = ['david font', 'david', 'mark', 'george', 'alex', 'guy', 'christopher', 'eric', 'steffen', 'male', 'man', 'fred', 'daniel', 'richard', 'james', 'thomas', 'brian', 'keita', 'takumi', 'ichiro', 'daichi', 'naoki', 'kenji', 'taro', 'ralph', 'tom', 'oliver', 'lee', 'rishi', 'diego', 'jorge', 'nicolas'];
+            var rawName = voice.name; // 漢字・日本語そのままの判定用
+            var lang = (voice.lang || '').toLowerCase();
+
+            // 特殊な代表的ブラウザ標準ボイスの性別マッピング（Google TTS等）
+            if (name.includes('google uk english male')) return '男性';
+            if (name.includes('google 日本語') || name.includes('google us english') || name.includes('google uk english female')) return '女性';
+
+            // 男性キーワード（漢字・ひらがな・カタカナ・ローマ字）
+            var maleKeywords = [
+                'male', 'man', 'boy', 'david', 'mark', 'george', 'alex', 'guy', 'christopher', 
+                'eric', 'steffen', 'fred', 'daniel', 'richard', 'james', 'thomas', 'brian', 
+                'keita', 'takumi', 'ichiro', 'daichi', 'naoki', 'kenji', 'taro', 'otoya', 
+                'hattori', 'ralph', 'tom', 'oliver', 'lee', 'rishi', 'diego', 'jorge', 
+                'nicolas', 'puck', 'fenrir', 'charon', 'zephyr', 'toru',
+                // 日本語男性名（漢字・ひらがな・カタカナ）
+                '圭太', 'けいた', 'ケイタ', '一郎', 'いちろう', 'イチロウ', '大智', 'だいち', 'ダイチ',
+                '直樹', 'なおき', 'ナオキ', '健二', 'けんじ', 'ケンジ', '太郎', 'たろう', 'タロウ',
+                '拓海', 'たくみ', 'タクミ', '音矢', 'おとや', 'オトヤ', '服部', 'はっとり', 'ハットリ',
+                '徹', 'とおる', 'トオル', '男性', '男声'
+            ];
+
+            // 女性キーワード（漢字・ひらがな・カタカナ・ローマ字）
+            var femaleKeywords = [
+                'female', 'woman', 'girl', 'samantha', 'zira', 'victoria', 'aria', 'jenny', 
+                'michelle', 'eva', 'fiona', 'joanna', 'susan', 'karen', 'catherine', 'hazel', 
+                'linda', 'amy', 'emma', 'stephanie', 'kyoko', 'nanami', 'aoi', 'mayu', 'sakura', 
+                'haruka', 'sayaka', 'yuri', 'misaki', 'ayumi', 'shiori', 'nozomi', 'maki', 
+                'hanako', 'akari', 'rin', 'yuka', 'siri', 'natasha', 'sara', 'lisa', 'moira', 'veena', 'tessa', 
+                'vicki', 'alice', 'allison', 'ava', 'serena', 'claire', 'kore', 'aoede', 'leda',
+                // 日本語女性名（漢字・ひらがな・カタカナ）
+                '七海', 'ななみ', 'ナナミ', '遥', 'はるか', 'ハルカ', '歩', 'あゆみ', 'アユミ',
+                '京子', 'きょうこ', 'キョウコ', 'さやか', 'サヤカ', '葵', 'あおい', 'アオイ',
+                '真由', 'まゆ', 'マユ', '咲良', 'さくら', 'サクラ', '由利', 'ゆり', 'ユリ',
+                '美咲', 'みさき', 'ミサキ', '志織', 'しおり', 'シオリ', '望', 'のぞみ', 'ノゾミ',
+                '真希', 'まき', 'マキ', '花子', 'はなこ', 'ハナコ', '朱莉', 'あかり', 'アカリ',
+                '凛', 'りん', 'リン', '由香', 'ゆか', 'ユカ', '女性', '女声'
+            ];
             
-            if (femaleKeywords.some(function(kw) { return name.includes(kw); })) return '女性';
-            if (maleKeywords.some(function(kw) { return name.includes(kw); })) return '男性';
+            // 漢字・英字双方でマッチングチェック
+            if (maleKeywords.some(function(kw) { return name.includes(kw) || rawName.includes(kw); })) return '男性';
+            if (femaleKeywords.some(function(kw) { return name.includes(kw) || rawName.includes(kw); })) return '女性';
+
+            // Google TTS や OS標準ボイスの判定
+            if (name.includes('google')) {
+                return '女性';
+            }
+
+            // 日本語音声の補正判定（男性名にヒットしなかった場合の安全判定）
+            if (lang.includes('ja') || lang.includes('jp') || name.includes('japan') || name.includes('nihon') || name.includes('日本語')) {
+                return '女性';
+            }
+
             return '不明';
         }
 
@@ -723,16 +928,73 @@
             var enVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('en'); });
             var jaVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('ja') || v.lang.toLowerCase().includes('jp'); });
 
-            var hqEn = enVoices.filter(isHighQualityVoice);
-            if (hqEn.length > 0) enVoices = hqEn;
-
+            // 日本語音声の高音質フィルタ（女性・男性の両方が必ず選択できるように安全マージ）
             var hqJa = jaVoices.filter(isHighQualityVoice);
-            if (hqJa.length > 0) jaVoices = hqJa;
+            if (hqJa.length > 0) {
+                var hasFemaleJa = hqJa.some(function(v) { return detectVoiceGender(v) === '女性'; });
+                var hasMaleJa = hqJa.some(function(v) { return detectVoiceGender(v) === '男性'; });
+
+                if (!hasFemaleJa) {
+                    var females = jaVoices.filter(function(v) { return detectVoiceGender(v) === '女性'; });
+                    hqJa = hqJa.concat(females);
+                }
+                if (!hasMaleJa) {
+                    var males = jaVoices.filter(function(v) { return detectVoiceGender(v) === '男性'; });
+                    hqJa = hqJa.concat(males);
+                }
+                jaVoices = hqJa.filter(function(v, idx, arr) {
+                    return arr.findIndex(function(t) { return t.voiceURI === v.voiceURI; }) === idx;
+                });
+            }
+
+            // 英語音声の高音質フィルタ（女性・男性の両方が必ず選択できるように安全マージ）
+            var hqEn = enVoices.filter(isHighQualityVoice);
+            if (hqEn.length > 0) {
+                var hasFemaleEn = hqEn.some(function(v) { return detectVoiceGender(v) === '女性'; });
+                var hasMaleEn = hqEn.some(function(v) { return detectVoiceGender(v) === '男性'; });
+
+                if (!hasFemaleEn) {
+                    var femalesEn = enVoices.filter(function(v) { return detectVoiceGender(v) === '女性'; });
+                    hqEn = hqEn.concat(femalesEn);
+                }
+                if (!hasMaleEn) {
+                    var malesEn = enVoices.filter(function(v) { return detectVoiceGender(v) === '男性'; });
+                    hqEn = hqEn.concat(malesEn);
+                }
+                enVoices = hqEn.filter(function(v, idx, arr) {
+                    return arr.findIndex(function(t) { return t.voiceURI === v.voiceURI; }) === idx;
+                });
+            }
 
             allEnglishVoices = enVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
             allJapaneseVoices = jaVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
 
             populateVoiceSelects();
+        }
+
+        function findPreferredVoice(voiceList, preferredKeywords, targetGender) {
+            if (!voiceList || voiceList.length === 0) return null;
+
+            // 1. 指定キーワード（例: "七海", "nanami" / "圭太", "keita" / "aria" / "brian"）にマッチする音声を最優先
+            for (var i = 0; i < preferredKeywords.length; i++) {
+                var kw = preferredKeywords[i].toLowerCase();
+                var matched = voiceList.find(function(v) {
+                    var n = (v.name || '').toLowerCase();
+                    return n.includes(kw);
+                });
+                if (matched) return matched;
+            }
+
+            // 2. 指定性別（女性 / 男性）に合致する最初の音声をフォールバック
+            if (targetGender) {
+                var genderMatched = voiceList.find(function(v) {
+                    return detectVoiceGender(v) === targetGender;
+                });
+                if (genderMatched) return genderMatched;
+            }
+
+            // 3. リスト先頭の音声
+            return voiceList[0];
         }
 
         function populateVoiceSelects() {
@@ -752,8 +1014,8 @@
                 var addedCount = 0;
                 list.forEach(function(v) {
                     var genderTag = detectVoiceGender(v);
-                    // 「性別不明」の音声は選択メニューから除外
-                    if (genderTag === '不明') return;
+                    // 「性別不明」の音声は完全に除外（メニューに一切追加しない）
+                    if (genderTag !== '女性' && genderTag !== '男性') return;
 
                     var opt = document.createElement('option');
                     opt.value = v.voiceURI;
@@ -762,10 +1024,17 @@
                     addedCount++;
                 });
 
+                // 有効な音声が1件も該当しない場合の安全なフォールバック
                 if (addedCount === 0) {
+                    var fallbackVoice = list[0];
                     var opt = document.createElement('option');
-                    opt.value = '';
-                    opt.textContent = 'OS標準高音質音声';
+                    if (fallbackVoice) {
+                        opt.value = fallbackVoice.voiceURI;
+                        opt.textContent = '✨ [推奨] ' + fallbackVoice.name;
+                    } else {
+                        opt.value = '';
+                        opt.textContent = 'OS標準高音質音声';
+                    }
                     selectEl.appendChild(opt);
                 }
             };
@@ -775,89 +1044,43 @@
             appendOptions(selectB_JA, allJapaneseVoices);
             appendOptions(selectB_EN, allEnglishVoices);
 
-            if (selectedVoiceA_JA_URI && getVoiceByURI(selectedVoiceA_JA_URI)) selectA_JA.value = selectedVoiceA_JA_URI;
-            else if (selectA_JA.options.length > 0) { selectedVoiceA_JA_URI = selectA_JA.options[0].value; selectA_JA.value = selectedVoiceA_JA_URI; }
+            // 話者 A (男性デフォルト: 日本語「圭太」, 英語「Brian」)
+            var defaultA_JA = findPreferredVoice(allJapaneseVoices, ['圭太', 'keita'], '男性');
+            var defaultA_EN = findPreferredVoice(allEnglishVoices, ['brian'], '男性');
 
-            if (selectedVoiceA_EN_URI && getVoiceByURI(selectedVoiceA_EN_URI)) selectA_EN.value = selectedVoiceA_EN_URI;
-            else if (selectA_EN.options.length > 0) { selectedVoiceA_EN_URI = selectA_EN.options[0].value; selectA_EN.value = selectedVoiceA_EN_URI; }
+            // 話者 B (女性デフォルト: 日本語「七海」, 英語「Aria」)
+            var defaultB_JA = findPreferredVoice(allJapaneseVoices, ['七海', 'nanami'], '女性');
+            var defaultB_EN = findPreferredVoice(allEnglishVoices, ['aria'], '女性');
 
-            if (selectedVoiceB_JA_URI && getVoiceByURI(selectedVoiceB_JA_URI)) selectB_JA.value = selectedVoiceB_JA_URI;
-            else if (selectB_JA.options.length > 1) { selectedVoiceB_JA_URI = selectB_JA.options[1].value; selectB_JA.value = selectedVoiceB_JA_URI; }
-            else if (selectB_JA.options.length > 0) { selectedVoiceB_JA_URI = selectB_JA.options[0].value; selectB_JA.value = selectedVoiceB_JA_URI; }
+            // 話者 A の選択値設定 (男性: 圭太 / Brian)
+            if (selectedVoiceA_JA_URI && getVoiceByURI(selectedVoiceA_JA_URI)) {
+                selectA_JA.value = selectedVoiceA_JA_URI;
+            } else if (defaultA_JA) {
+                selectedVoiceA_JA_URI = defaultA_JA.voiceURI;
+                selectA_JA.value = selectedVoiceA_JA_URI;
+            }
 
-            if (selectedVoiceB_EN_URI && getVoiceByURI(selectedVoiceB_EN_URI)) selectB_EN.value = selectedVoiceB_EN_URI;
-            else if (selectB_EN.options.length > 1) { selectedVoiceB_EN_URI = selectB_EN.options[1].value; selectB_EN.value = selectedVoiceB_EN_URI; }
-            else if (selectB_EN.options.length > 0) { selectedVoiceB_EN_URI = selectB_EN.options[0].value; selectB_EN.value = selectedVoiceB_EN_URI; }
-        }
+            if (selectedVoiceA_EN_URI && getVoiceByURI(selectedVoiceA_EN_URI)) {
+                selectA_EN.value = selectedVoiceA_EN_URI;
+            } else if (defaultA_EN) {
+                selectedVoiceA_EN_URI = defaultA_EN.voiceURI;
+                selectA_EN.value = selectedVoiceA_EN_URI;
+            }
 
-        function initVoiceEngines() {
-            if (!('speechSynthesis' in window)) return;
-            var voices = window.speechSynthesis.getVoices();
-            if (voices.length === 0) return;
+            // 話者 B の選択値設定 (女性: 七海 / Aria)
+            if (selectedVoiceB_JA_URI && getVoiceByURI(selectedVoiceB_JA_URI)) {
+                selectB_JA.value = selectedVoiceB_JA_URI;
+            } else if (defaultB_JA) {
+                selectedVoiceB_JA_URI = defaultB_JA.voiceURI;
+                selectB_JA.value = selectedVoiceB_JA_URI;
+            }
 
-            var enVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('en'); });
-            var jaVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('ja') || v.lang.toLowerCase().includes('jp'); });
-
-            var hqEn = enVoices.filter(isHighQualityVoice);
-            if (hqEn.length > 0) enVoices = hqEn;
-
-            var hqJa = jaVoices.filter(isHighQualityVoice);
-            if (hqJa.length > 0) jaVoices = hqJa;
-
-            allEnglishVoices = enVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
-            allJapaneseVoices = jaVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
-
-            populateVoiceSelects();
-        }
-
-        function populateVoiceSelects() {
-            var selectA_EN = document.getElementById('voice-select-a-en');
-            var selectA_JA = document.getElementById('voice-select-a-ja');
-            var selectB_EN = document.getElementById('voice-select-b-en');
-            var selectB_JA = document.getElementById('voice-select-b-ja');
-
-            if (!selectA_EN || !selectA_JA || !selectB_EN || !selectB_JA) return;
-
-            selectA_EN.innerHTML = '';
-            selectA_JA.innerHTML = '';
-            selectB_EN.innerHTML = '';
-            selectB_JA.innerHTML = '';
-
-            var appendOptions = function(selectEl, list) {
-                if (list.length === 0) {
-                    var opt = document.createElement('option');
-                    opt.value = '';
-                    opt.textContent = 'OS標準高音質音声';
-                    selectEl.appendChild(opt);
-                    return;
-                }
-                list.forEach(function(v) {
-                    var genderTag = detectVoiceGender(v);
-                    var opt = document.createElement('option');
-                    opt.value = v.voiceURI;
-                    opt.textContent = '✨ [' + genderTag + '] ' + v.name + ' (' + v.lang + ')';
-                    selectEl.appendChild(opt);
-                });
-            };
-
-            appendOptions(selectA_JA, allJapaneseVoices);
-            appendOptions(selectA_EN, allEnglishVoices);
-            appendOptions(selectB_JA, allJapaneseVoices);
-            appendOptions(selectB_EN, allEnglishVoices);
-
-            if (selectedVoiceA_JA_URI && getVoiceByURI(selectedVoiceA_JA_URI)) selectA_JA.value = selectedVoiceA_JA_URI;
-            else if (allJapaneseVoices.length > 0) { selectedVoiceA_JA_URI = allJapaneseVoices[0].voiceURI; selectA_JA.value = selectedVoiceA_JA_URI; }
-
-            if (selectedVoiceA_EN_URI && getVoiceByURI(selectedVoiceA_EN_URI)) selectA_EN.value = selectedVoiceA_EN_URI;
-            else if (allEnglishVoices.length > 0) { selectedVoiceA_EN_URI = allEnglishVoices[0].voiceURI; selectA_EN.value = selectedVoiceA_EN_URI; }
-
-            if (selectedVoiceB_JA_URI && getVoiceByURI(selectedVoiceB_JA_URI)) selectB_JA.value = selectedVoiceB_JA_URI;
-            else if (allJapaneseVoices.length > 1) { selectedVoiceB_JA_URI = allJapaneseVoices[1].voiceURI; selectB_JA.value = selectedVoiceB_JA_URI; }
-            else if (allJapaneseVoices.length > 0) { selectedVoiceB_JA_URI = allJapaneseVoices[0].voiceURI; selectB_JA.value = selectedVoiceB_JA_URI; }
-
-            if (selectedVoiceB_EN_URI && getVoiceByURI(selectedVoiceB_EN_URI)) selectB_EN.value = selectedVoiceB_EN_URI;
-            else if (allEnglishVoices.length > 1) { selectedVoiceB_EN_URI = allEnglishVoices[1].voiceURI; selectB_EN.value = selectedVoiceB_EN_URI; }
-            else if (allEnglishVoices.length > 0) { selectedVoiceB_EN_URI = allEnglishVoices[0].voiceURI; selectB_EN.value = selectedVoiceB_EN_URI; }
+            if (selectedVoiceB_EN_URI && getVoiceByURI(selectedVoiceB_EN_URI)) {
+                selectB_EN.value = selectedVoiceB_EN_URI;
+            } else if (defaultB_EN) {
+                selectedVoiceB_EN_URI = defaultB_EN.voiceURI;
+                selectB_EN.value = selectedVoiceB_EN_URI;
+            }
         }
 
         function onVoiceSelected(speaker, lang, val) {
@@ -873,10 +1096,11 @@
             window.speechSynthesis.cancel();
 
             var targetURI = '';
-            if (speaker === 'A' && lang === 'en') targetURI = selectedVoiceA_EN_URI;
-            if (speaker === 'A' && lang === 'ja') targetURI = selectedVoiceA_JA_URI;
-            if (speaker === 'B' && lang === 'en') targetURI = selectedVoiceB_EN_URI;
-            if (speaker === 'B' && lang === 'ja') targetURI = selectedVoiceB_JA_URI;
+            var speed = 1.0;
+            if (speaker === 'A' && lang === 'en') { targetURI = selectedVoiceA_EN_URI; speed = speedA_EN; }
+            if (speaker === 'A' && lang === 'ja') { targetURI = selectedVoiceA_JA_URI; speed = speedA_JA; }
+            if (speaker === 'B' && lang === 'en') { targetURI = selectedVoiceB_EN_URI; speed = speedB_EN; }
+            if (speaker === 'B' && lang === 'ja') { targetURI = selectedVoiceB_JA_URI; speed = speedB_JA; }
 
             var matchedVoice = getVoiceByURI(targetURI);
             var testText = lang === 'en' 
@@ -884,7 +1108,7 @@
                 : (speaker === 'A' ? "こんにちは。話者Aの日本語音声のテストです。" : "はじめまして。話者Bの日本語音声のテストです。");
 
             var utterance = new SpeechSynthesisUtterance(testText);
-            utterance.rate = lang === 'en' ? currentEnSpeed : currentJaSpeed;
+            utterance.rate = speed;
             if (matchedVoice) {
                 utterance.voice = matchedVoice;
             } else {
@@ -902,7 +1126,10 @@
             populateScriptSelector();
             resetLineStates();
             renderScriptContent();
-            updateSpeedButtonsUI();
+            updateSpeedSlidersUI();
+
+            var rptSelect = document.getElementById('repeat-mode-select');
+            if (rptSelect) rptSelect.value = contentRepeatMode;
 
             initVoiceEngines();
             if ('speechSynthesis' in window) {
@@ -926,6 +1153,16 @@
             if (badgeEl && activeScript) {
                 badgeEl.textContent = "スクリプト: " + activeScript.title;
             }
+
+            // スライダーヘッダーの話者名を動的に更新
+            var labelA = document.getElementById('speed-label-speaker-a');
+            var labelB = document.getElementById('speed-label-speaker-b');
+            if (labelA && activeScript) {
+                labelA.innerHTML = '<i class="fa-solid fa-user-tie text-[10px] text-blue-600"></i> ' + (activeScript.speakerA || '話者A (Person A)');
+            }
+            if (labelB && activeScript) {
+                labelB.innerHTML = '<i class="fa-solid fa-user-gear text-[10px] text-emerald-600"></i> ' + (activeScript.speakerB || '話者B (Person B)');
+            }
         }
 
         function resetLineStates() {
@@ -934,7 +1171,19 @@
             linePlayCounts = new Array(count).fill(0);
         }
 
-        function switchScript(scriptId) {
+        function setRepeatMode(mode) {
+            contentRepeatMode = mode;
+            saveAllToStorage();
+            if (mode === 'content') {
+                showToast("「このコンテンツをリピート」に設定しました");
+            } else if (mode === 'all') {
+                showToast("「全コンテンツ通してリピート」に設定しました");
+            } else {
+                showToast("「リピートなし (1回のみ)」に設定しました");
+            }
+        }
+
+        function switchScript(scriptId, autoPlay) {
             stopPlayback();
             currentScriptId = scriptId;
             activeScript = scriptsList.find(function(s) { return s.id === scriptId; }) || michaelMovieScript;
@@ -944,6 +1193,11 @@
             renderScriptContent();
             updateProgressUI();
             saveAllToStorage();
+
+            if (autoPlay) {
+                currentLineIndex = 0;
+                startPlayback();
+            }
         }
 
         function renderScriptContent() {
@@ -951,34 +1205,47 @@
             if (!container) return;
             container.innerHTML = '';
 
+            // スクリプト番号 (1始まり: 1, 2, 3...)
+            var scriptNum = (scriptsList.findIndex(function(s) { return s.id === activeScript.id; }) + 1) || 1;
+
             activeScript.lines.forEach(function(line, index) {
                 var isSpeakerA = line.speaker === 'A';
                 var speakerName = isSpeakerA ? (activeScript.speakerA || 'Person A') : (activeScript.speakerB || 'Person B');
                 var badgeClass = isSpeakerA ? 'speaker-a-badge' : 'speaker-b-badge';
                 var isRepeated = !!lineRepeatStates[index];
                 var playCount = linePlayCounts[index] || 0;
+                // 「スクリプト番号-行番号」形式 (例: 1-1, 1-2, 2-3...)
+                var seqNumStr = scriptNum + "-" + (index + 1);
 
                 var card = document.createElement('div');
                 card.id = "line-card-" + index;
-                card.onclick = function() { playLineIndex(index); };
-                card.className = "bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer hover:border-indigo-300 space-y-3 relative overflow-hidden";
+                card.onclick = function() { handleLineClick(index); };
+                card.className = "bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer hover:border-indigo-300 space-y-3 relative overflow-hidden group";
+                card.title = "クリックでリピート再生 / 再クリックで一時停止";
 
                 card.innerHTML = 
                     '<div class="flex flex-wrap justify-between items-center text-xs gap-2 border-b border-slate-100 pb-2">' +
-                        '<div class="flex items-center gap-2">' +
+                        '<div class="flex items-center gap-2 flex-wrap">' +
+                            '<!-- Prominent Sequential Number Badge (ScriptNum-LineNum) -->' +
+                            '<span class="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 font-black text-xs font-mono text-indigo-700 flex items-center gap-1 shadow-xs">' +
+                                '<i class="fa-solid fa-hashtag text-[10px] text-indigo-500"></i> No.' + seqNumStr +
+                            '</span>' +
                             '<span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] ' + badgeClass + '">' +
                                 '<i class="fa-solid fa-user text-[10px] mr-1"></i> ' + speakerName +
                             '</span>' +
                             '<span id="step-indicator-' + index + '" class="hidden text-[11px] font-extrabold px-2 py-0.5 rounded-md"></span>' +
                         '</div>' +
 
-                        '<div class="flex items-center gap-2">' +
+                        '<div class="flex items-center gap-1.5 flex-wrap">' +
                             '<span id="count-badge-' + index + '" class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200" title="再生回数">' +
                                 '再生: ' + playCount + '回' +
                             '</span>' +
-                            '<span class="text-slate-400 font-mono text-[11px]">#' + (index + 1) + '</span>' +
-                            '<button onclick="event.stopPropagation(); playLineIndex(' + index + ');" class="w-7 h-7 rounded-full bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 flex items-center justify-center transition" title="この行から再生">' +
-                                '<i class="fa-solid fa-volume-high text-xs"></i>' +
+                            '<!-- Per-line MP3 Export Button -->' +
+                            '<button onclick="event.stopPropagation(); exportSingleLineMp3(' + index + ');" id="btn-export-line-' + index + '" class="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-700 border border-amber-300 transition text-[11px] font-bold flex items-center gap-1 shadow-xs" title="No.' + seqNumStr + '（日本語＋ポーズ＋英語）をMP3でダウンロード">' +
+                                '<i class="fa-solid fa-download text-[10px]"></i> <span>MP3</span>' +
+                            '</button>' +
+                            '<button onclick="event.stopPropagation(); handleLineClick(' + index + ');" class="w-7 h-7 rounded-full bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 flex items-center justify-center transition shadow-xs" title="リピート再生 / 一時停止">' +
+                                '<i class="fa-solid fa-rotate text-xs"></i>' +
                             '</button>' +
                             '<label onclick="event.stopPropagation();" class="flex items-center gap-1 text-[11px] font-bold text-slate-600 cursor-pointer bg-slate-50 hover:bg-indigo-50 px-2 py-1 rounded-lg border border-slate-200 select-none">' +
                                 '<input type="checkbox" id="repeat-check-' + index + '" onchange="toggleLineRepeat(' + index + ', this.checked)" ' + (isRepeated ? 'checked' : '') + ' class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">' +
@@ -1088,39 +1355,37 @@
             activeScript.lines.forEach(function(_, idx) { revealEnglish(idx); });
         }
 
-        function setJaSpeed(speed) {
-            currentJaSpeed = parseFloat(speed);
+        function onSpeedSliderChange(speaker, lang, value) {
+            var num = parseFloat(value);
+            if (speaker === 'A' && lang === 'ja') speedA_JA = num;
+            if (speaker === 'A' && lang === 'en') speedA_EN = num;
+            if (speaker === 'B' && lang === 'ja') speedB_JA = num;
+            if (speaker === 'B' && lang === 'en') speedB_EN = num;
+
             saveAllToStorage();
-            updateSpeedButtonsUI();
+            updateSpeedSlidersUI();
         }
 
-        function setEnSpeed(speed) {
-            currentEnSpeed = parseFloat(speed);
-            saveAllToStorage();
-            updateSpeedButtonsUI();
-        }
+        function updateSpeedSlidersUI() {
+            var sliderA_JA = document.getElementById('slider-speed-a-ja');
+            var sliderA_EN = document.getElementById('slider-speed-a-en');
+            var sliderB_JA = document.getElementById('slider-speed-b-ja');
+            var sliderB_EN = document.getElementById('slider-speed-b-en');
 
-        function updateSpeedButtonsUI() {
-            document.getElementById('ja-speed-display').textContent = currentJaSpeed.toFixed(2) + "x";
-            document.getElementById('en-speed-display').textContent = currentEnSpeed.toFixed(2) + "x";
+            var valA_JA = document.getElementById('speed-val-a-ja');
+            var valA_EN = document.getElementById('speed-val-a-en');
+            var valB_JA = document.getElementById('speed-val-b-ja');
+            var valB_EN = document.getElementById('speed-val-b-en');
 
-            document.querySelectorAll('.ja-speed-btn').forEach(function(btn) {
-                var bSpeed = parseFloat(btn.dataset.speed);
-                if (Math.abs(bSpeed - currentJaSpeed) < 0.01) {
-                    btn.className = "ja-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-rose-500 bg-rose-600 text-white";
-                } else {
-                    btn.className = "ja-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700";
-                }
-            });
+            if (sliderA_JA) sliderA_JA.value = speedA_JA;
+            if (sliderA_EN) sliderA_EN.value = speedA_EN;
+            if (sliderB_JA) sliderB_JA.value = speedB_JA;
+            if (sliderB_EN) sliderB_EN.value = speedB_EN;
 
-            document.querySelectorAll('.en-speed-btn').forEach(function(btn) {
-                var bSpeed = parseFloat(btn.dataset.speed);
-                if (Math.abs(bSpeed - currentEnSpeed) < 0.01) {
-                    btn.className = "en-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-indigo-500 bg-indigo-600 text-white";
-                } else {
-                    btn.className = "en-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700";
-                }
-            });
+            if (valA_JA) valA_JA.textContent = speedA_JA.toFixed(2) + "x";
+            if (valA_EN) valA_EN.textContent = speedA_EN.toFixed(2) + "x";
+            if (valB_JA) valB_JA.textContent = speedB_JA.toFixed(2) + "x";
+            if (valB_EN) valB_EN.textContent = speedB_EN.toFixed(2) + "x";
         }
 
         function togglePlayPause() {
@@ -1178,11 +1443,34 @@
             }
         }
 
+        // 行カードクリック時の動作：リピート再生 ⇄ 一時停止のトグル制御
+        function handleLineClick(index) {
+            var scriptNum = (scriptsList.findIndex(function(s) { return s.id === activeScript.id; }) + 1) || 1;
+            var seqNumStr = scriptNum + "-" + (index + 1);
+
+            if (isPlaying && currentLineIndex === index) {
+                // 再生中に同じ行をクリックした場合は一時停止
+                pausePlayback();
+                showToast("No." + seqNumStr + " を一時停止しました");
+            } else {
+                // 行のリピート設定をONにして集中的に反復再生
+                for (var i = 0; i < lineRepeatStates.length; i++) {
+                    lineRepeatStates[i] = (i === index);
+                    var chk = document.getElementById('repeat-check-' + i);
+                    if (chk) chk.checked = (i === index);
+                }
+                saveAllToStorage();
+
+                currentLineIndex = index;
+                isPlaying = true;
+                updatePlayButtonUI();
+                playCurrentLineSequence();
+                showToast("No." + seqNumStr + " のリピート再生を開始しました");
+            }
+        }
+
         function playLineIndex(index) {
-            currentLineIndex = index;
-            isPlaying = true;
-            updatePlayButtonUI();
-            playCurrentLineSequence();
+            handleLineClick(index);
         }
 
         function prevLine() {
@@ -1258,8 +1546,13 @@
                 return;
             }
 
-            var utterance = new SpeechSynthesisUtterance(line.ja);
-            utterance.rate = currentJaSpeed;
+            // HTMLタグ（赤字ハイライト用spanタグ等）を除去して音声合成に渡す
+            var cleanJaText = (line.ja || '').replace(/<[^>]*>/g, '').trim();
+            var utterance = new SpeechSynthesisUtterance(cleanJaText);
+            
+            // 話者に応じた日本語速度を適用
+            var currentRate = (line.speaker === 'A') ? speedA_JA : speedB_JA;
+            utterance.rate = currentRate;
 
             var targetJAURI = (line.speaker === 'A') ? selectedVoiceA_JA_URI : selectedVoiceB_JA_URI;
             var matchedVoice = getVoiceByURI(targetJAURI);
@@ -1299,8 +1592,13 @@
             highlightLineCard(currentLineIndex, 'PAUSE');
             updateStepBanner('2. ポーズ中（クリックでスキップ）', 'amber');
 
-            var wordCount = (line.text || "").split(/\s+/).length || 8;
-            var estimatedDurationSec = (wordCount / 2.5) / currentEnSpeed;
+            // HTMLタグを除去した平文テキストから単語数を正確に算出
+            var cleanEnText = (line.text || '').replace(/<[^>]*>/g, '').trim();
+            var wordCount = cleanEnText.split(/\s+/).filter(Boolean).length || 8;
+            
+            // 話者に応じた英語速度から適切なポーズ長さを算出
+            var enSpeed = (line.speaker === 'A') ? speedA_EN : speedB_EN;
+            var estimatedDurationSec = (wordCount / 2.5) / enSpeed;
             estimatedDurationSec = Math.max(1.8, estimatedDurationSec); // 1.0倍固定
 
             var remainingTime = estimatedDurationSec;
@@ -1341,8 +1639,13 @@
 
             revealEnglish(currentLineIndex);
 
-            var utterance = new SpeechSynthesisUtterance(line.text);
-            utterance.rate = currentEnSpeed;
+            // HTMLタグ（赤字ハイライト用spanタグ等）を除去して音声合成に渡す
+            var cleanEnText = (line.text || '').replace(/<[^>]*>/g, '').trim();
+            var utterance = new SpeechSynthesisUtterance(cleanEnText);
+            
+            // 話者に応じた英語速度を適用
+            var currentRate = (line.speaker === 'A') ? speedA_EN : speedB_EN;
+            utterance.rate = currentRate;
 
             var targetURI = (line.speaker === 'A') ? selectedVoiceA_EN_URI : selectedVoiceB_EN_URI;
             var matchedVoice = getVoiceByURI(targetURI);
@@ -1371,8 +1674,24 @@
                         currentLineIndex++;
                         playCurrentLineSequence();
                     } else {
-                        stopPlayback();
-                        showToast("スクリプト全体の再生が完了しました！");
+                        if (contentRepeatMode === 'content') {
+                            showToast("「" + activeScript.title + "」を最初からリピート再生します");
+                            currentLineIndex = 0;
+                            setTimeout(function() {
+                                if (isPlaying && token === activePlaybackToken) playCurrentLineSequence();
+                            }, 500);
+                        } else if (contentRepeatMode === 'all') {
+                            var currentScriptIdx = scriptsList.findIndex(function(s) { return s.id === currentScriptId; });
+                            var nextScriptIdx = (currentScriptIdx + 1) % scriptsList.length;
+                            var nextScript = scriptsList[nextScriptIdx];
+                            showToast("次のスクリプト「" + nextScript.title + "」へ移行して再生します");
+                            setTimeout(function() {
+                                switchScript(nextScript.id, true);
+                            }, 600);
+                        } else {
+                            stopPlayback();
+                            showToast("スクリプト全体の再生が完了しました！");
+                        }
                     }
                 }
             };
@@ -1442,9 +1761,10 @@
 
         function updateProgressUI() {
             var total = activeScript ? activeScript.lines.length : 0;
-            var currentDisplay = currentLineIndex >= 0 ? currentLineIndex + 1 : 0;
-            document.getElementById('progress-indicator').textContent = "行 " + currentDisplay + " / " + total;
-            var pct = total > 0 ? (currentDisplay / total) * 100 : 0;
+            var scriptNum = (scriptsList.findIndex(function(s) { return s.id === activeScript.id; }) + 1) || 1;
+            var currentSeqStr = currentLineIndex >= 0 ? (scriptNum + "-" + (currentLineIndex + 1)) : "--";
+            document.getElementById('progress-indicator').textContent = "行 No." + currentSeqStr + " (全 " + total + " 行)";
+            var pct = total > 0 && currentLineIndex >= 0 ? ((currentLineIndex + 1) / total) * 100 : 0;
             document.getElementById('progress-bar-fill').style.width = pct + "%";
         }
 
@@ -1466,6 +1786,547 @@
             editingLineIndex = null;
         }
 
+        // --- Audio File Export (WAV) Implementation ---
+        var isExportingAudio = false;
+
+        function openExportAudioModal() {
+            if (!activeScript) return;
+            var titleEl = document.getElementById('export-script-title');
+            var speedEl = document.getElementById('export-speeds-info');
+            if (titleEl) titleEl.textContent = activeScript.title;
+            if (speedEl) {
+                speedEl.textContent = "A[日" + speedA_JA.toFixed(2) + "x/英" + speedA_EN.toFixed(2) + "x] • B[日" + speedB_JA.toFixed(2) + "x/英" + speedB_EN.toFixed(2) + "x]";
+            }
+
+            // Reset progress state
+            document.getElementById('export-progress-area').classList.add('hidden');
+            document.getElementById('export-player-container').classList.add('hidden');
+            var btn = document.getElementById('btn-start-export');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-download"></i> <span>WAV音声を生成・保存</span>';
+            }
+
+            document.getElementById('audio-export-modal').classList.remove('hidden');
+        }
+
+        function closeExportAudioModal() {
+            if (isExportingAudio) {
+                if (!confirm("音声生成を中止しますか？")) return;
+                isExportingAudio = false;
+            }
+            document.getElementById('audio-export-modal').classList.add('hidden');
+        }
+
+        // Helper: Fetch TTS audio as ArrayBuffer via Google TTS with CORS proxy fallback
+        async function fetchTTSAudioBuffer(text, lang) {
+            var cleanText = text.replace(/<[^>]*>/g, '').trim();
+            if (!cleanText) return null;
+
+            var encodedText = encodeURIComponent(cleanText);
+            var directUrl = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" + lang + "&q=" + encodedText;
+            var proxyUrls = [
+                "https://corsproxy.io/?" + encodeURIComponent(directUrl),
+                "https://api.allorigins.win/raw?url=" + encodeURIComponent(directUrl),
+                directUrl
+            ];
+
+            for (var i = 0; i < proxyUrls.length; i++) {
+                try {
+                    var response = await fetch(proxyUrls[i]);
+                    if (response.ok) {
+                        return await response.arrayBuffer();
+                    }
+                } catch (e) {
+                    console.warn("TTS fetch attempt " + (i + 1) + " failed, trying fallback...", e);
+                }
+            }
+            return null;
+        }
+
+        // Helper: Resample / speed adjust an AudioBuffer using OfflineAudioContext
+        async function createRescaledBuffer(audioCtx, originalBuffer, playbackRate) {
+            if (Math.abs(playbackRate - 1.0) < 0.01) return originalBuffer;
+
+            var targetLength = Math.max(1, Math.round(originalBuffer.length / playbackRate));
+            var offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+                originalBuffer.numberOfChannels,
+                targetLength,
+                originalBuffer.sampleRate
+            );
+
+            var source = offlineCtx.createBufferSource();
+            source.buffer = originalBuffer;
+            source.playbackRate.value = playbackRate;
+            source.connect(offlineCtx.destination);
+            source.start(0);
+
+            return await offlineCtx.startRendering();
+        }
+
+        function audioBufferToMp3Blob(buffer, kbps) {
+            kbps = kbps || 160;
+            var numChannels = buffer.numberOfChannels;
+            var sampleRate = buffer.sampleRate;
+            var mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, kbps);
+            var mp3Data = [];
+
+            // Convert Float32Array to Int16Array
+            var left = buffer.getChannelData(0);
+            var right = numChannels > 1 ? buffer.getChannelData(1) : left;
+            var sampleBlockSize = 1152;
+            var leftInt16 = new Int16Array(left.length);
+            var rightInt16 = new Int16Array(right.length);
+
+            for (var i = 0; i < left.length; i++) {
+                var sLeft = Math.max(-1, Math.min(1, left[i]));
+                leftInt16[i] = sLeft < 0 ? sLeft * 0x8000 : sLeft * 0x7FFF;
+                if (numChannels > 1) {
+                    var sRight = Math.max(-1, Math.min(1, right[i]));
+                    rightInt16[i] = sRight < 0 ? sRight * 0x8000 : sRight * 0x7FFF;
+                }
+            }
+
+            for (var i = 0; i < leftInt16.length; i += sampleBlockSize) {
+                var leftChunk = leftInt16.subarray(i, i + sampleBlockSize);
+                var mp3buf;
+                if (numChannels === 1) {
+                    mp3buf = mp3encoder.encodeBuffer(leftChunk);
+                } else {
+                    var rightChunk = rightInt16.subarray(i, i + sampleBlockSize);
+                    mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+                }
+                if (mp3buf.length > 0) {
+                    mp3Data.push(mp3buf);
+                }
+            }
+
+            var endBuf = mp3encoder.flush();
+            if (endBuf.length > 0) {
+                mp3Data.push(endBuf);
+            }
+
+            return new Blob(mp3Data, { type: 'audio/mp3' });
+        }
+
+        // Helper: Pure JS 16-bit PCM WAV File Encoder
+        function audioBufferToWav(buffer) {
+            var numChannels = buffer.numberOfChannels;
+            var sampleRate = buffer.sampleRate;
+            var format = 1; // 1 = PCM
+            var bitDepth = 16;
+            var bytesPerSample = bitDepth / 8;
+            var blockAlign = numChannels * bytesPerSample;
+
+            var length = buffer.length;
+            var dataByteCount = length * blockAlign;
+            var totalByteCount = 44 + dataByteCount;
+            var arrayBuffer = new ArrayBuffer(totalByteCount);
+            var view = new DataView(arrayBuffer);
+
+            function writeString(offset, string) {
+                for (var i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            // RIFF chunk descriptor
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + dataByteCount, true);
+            writeString(8, 'WAVE');
+
+            // "fmt " sub-chunk
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true); // SubChunk1Size (16 for PCM)
+            view.setUint16(20, format, true); // AudioFormat (1 for PCM)
+            view.setUint16(22, numChannels, true); // NumChannels
+            view.setUint32(24, sampleRate, true); // SampleRate
+            view.setUint32(28, sampleRate * blockAlign, true); // ByteRate
+            view.setUint16(32, blockAlign, true); // BlockAlign
+            view.setUint16(34, bitDepth, true); // BitsPerSample
+
+            // "data" sub-chunk
+            writeString(36, 'data');
+            view.setUint32(40, dataByteCount, true);
+
+            // Write audio samples
+            var offset = 44;
+            var channelData = [];
+            for (var c = 0; c < numChannels; c++) {
+                channelData.push(buffer.getChannelData(c));
+            }
+
+            for (var i = 0; i < length; i++) {
+                for (var ch = 0; ch < numChannels; ch++) {
+                    var sample = channelData[ch][i];
+                    // Clamp to [-1, 1]
+                    sample = Math.max(-1, Math.min(1, sample));
+                    // Convert float to 16-bit signed integer
+                    var intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    view.setInt16(offset, intSample, true);
+                    offset += 2;
+                }
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        async function startAudioExport() {
+            if (!activeScript || activeScript.lines.length === 0) {
+                showToast("出力対象のスクリプト行が存在しません。");
+                return;
+            }
+
+            isExportingAudio = true;
+            var btn = document.getElementById('btn-start-export');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>生成処理中...</span>';
+
+            var progressArea = document.getElementById('export-progress-area');
+            var progressBar = document.getElementById('export-progress-bar');
+            var progressPct = document.getElementById('export-progress-pct');
+            var statusLabel = document.getElementById('export-status-label');
+            var detailLabel = document.getElementById('export-detail-label');
+            progressArea.classList.remove('hidden');
+
+            var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+            var decodeCtx = new AudioCtxClass();
+
+            var totalLines = activeScript.lines.length;
+            var segments = []; // Array of { buffer: AudioBuffer, delayAfter: number }
+
+            try {
+                for (var idx = 0; idx < totalLines; idx++) {
+                    if (!isExportingAudio) {
+                        decodeCtx.close();
+                        return;
+                    }
+
+                    var line = activeScript.lines[idx];
+                    var isA = line.speaker === 'A';
+                    var jaRate = isA ? speedA_JA : speedB_JA;
+                    var enRate = isA ? speedA_EN : speedB_EN;
+
+                    var currentPct = Math.round((idx / totalLines) * 85);
+                    progressBar.style.width = currentPct + "%";
+                    progressPct.textContent = currentPct + "%";
+                    detailLabel.textContent = "行 #" + (idx + 1) + " / " + totalLines + " の日本語・英語音声を合成中...";
+
+                    // 1. Japanese Segment
+                    var jaArrayBuffer = await fetchTTSAudioBuffer(line.ja || '', 'ja');
+                    if (jaArrayBuffer) {
+                        var rawJaBuffer = await decodeCtx.decodeAudioData(jaArrayBuffer);
+                        var adjustedJaBuffer = await createRescaledBuffer(decodeCtx, rawJaBuffer, jaRate);
+                        // Short gap (0.25s) before pause
+                        segments.push({ buffer: adjustedJaBuffer, gapAfter: 0.25 });
+                    }
+
+                    // 2. Silent Pause Segment (Word count calculation identical to playback)
+                    var cleanEnText = (line.text || '').replace(/<[^>]*>/g, '').trim();
+                    var wordCount = cleanEnText.split(/\s+/).filter(Boolean).length || 8;
+                    var estimatedDurationSec = (wordCount / 2.5) / enRate;
+                    estimatedDurationSec = Math.max(1.8, estimatedDurationSec); // 1.0x fixed pause duration
+                    
+                    // Add silence as gapAfter
+                    segments.push({ buffer: null, gapAfter: estimatedDurationSec });
+
+                    // 3. English Segment
+                    var enArrayBuffer = await fetchTTSAudioBuffer(cleanEnText, 'en');
+                    if (enArrayBuffer) {
+                        var rawEnBuffer = await decodeCtx.decodeAudioData(enArrayBuffer);
+                        var adjustedEnBuffer = await createRescaledBuffer(decodeCtx, rawEnBuffer, enRate);
+                        // 0.6s gap before next dialogue line
+                        segments.push({ buffer: adjustedEnBuffer, gapAfter: 0.6 });
+                    }
+                }
+
+                // Render all segments into a single composite AudioBuffer using OfflineAudioContext
+                statusLabel.innerHTML = '<i class="fa-solid fa-compact-disc fa-spin text-amber-600"></i> WAVファイルに結合・エンコード中...';
+                progressBar.style.width = "92%";
+                progressPct.textContent = "92%";
+                detailLabel.textContent = "音声トラックの最終ミキシングを実行しています...";
+
+                // Calculate total duration
+                var sampleRate = 44100;
+                var totalDurationSec = 0;
+                segments.forEach(function(seg) {
+                    if (seg.buffer) totalDurationSec += seg.buffer.duration;
+                    if (seg.gapAfter) totalDurationSec += seg.gapAfter;
+                });
+                totalDurationSec += 1.0; // padding
+
+                var totalSamples = Math.max(1, Math.round(totalDurationSec * sampleRate));
+                var offlineMixCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, totalSamples, sampleRate);
+
+                var currentTime = 0.2; // Start with gentle 0.2s pre-roll
+                segments.forEach(function(seg) {
+                    if (seg.buffer) {
+                        var src = offlineMixCtx.createBufferSource();
+                        src.buffer = seg.buffer;
+                        src.connect(offlineMixCtx.destination);
+                        src.start(currentTime);
+                        currentTime += seg.buffer.duration;
+                    }
+                    if (seg.gapAfter) {
+                        currentTime += seg.gapAfter;
+                    }
+                });
+
+                var renderedCompositeBuffer = await offlineMixCtx.startRendering();
+                decodeCtx.close();
+
+                // Convert to WAV Blob
+                var wavBlob = audioBufferToWav(renderedCompositeBuffer);
+                var wavUrl = URL.createObjectURL(wavBlob);
+
+                // Update UI to completion
+                progressBar.style.width = "100%";
+                progressPct.textContent = "100%";
+                statusLabel.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> 音声ファイル生成完了！';
+                detailLabel.textContent = "合計時間: " + Math.round(totalDurationSec) + "秒 (サイズ: " + (wavBlob.size / 1024 / 1024).toFixed(1) + " MB)";
+
+                // Show in mini player
+                var playerContainer = document.getElementById('export-player-container');
+                var audioPlayer = document.getElementById('export-audio-player');
+                if (playerContainer && audioPlayer) {
+                    audioPlayer.src = wavUrl;
+                    playerContainer.classList.remove('hidden');
+                }
+
+                // Trigger Automatic File Download
+                var downloadLink = document.createElement('a');
+                downloadLink.href = wavUrl;
+                downloadLink.download = (activeScript.title || "英語瞬発力トレーニング") + "_通常音声.wav";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove();
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> <span>再出力する</span>';
+                showToast("WAV音声ファイルの出力・ダウンロードが完了しました！");
+
+            } catch (err) {
+                console.error("Audio export failed:", err);
+                statusLabel.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-600"></i> 出力エラー';
+                detailLabel.textContent = "音声データの取得または結合に失敗しました。インターネット接続をご確認ください。";
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-download"></i> <span>再試行</span>';
+                showToast("音声ファイルの出力中にエラーが発生しました。");
+            } finally {
+                isExportingAudio = false;
+            }
+        }
+
+        // Helper: Generate an AudioBuffer for a single line (Japanese + Pause + English)
+        async function buildLineCompositeBuffer(decodeCtx, line) {
+            var isA = line.speaker === 'A';
+            var jaRate = isA ? speedA_JA : speedB_JA;
+            var enRate = isA ? speedA_EN : speedB_EN;
+
+            var segments = [];
+
+            // 1. Japanese
+            var jaArrayBuffer = await fetchTTSAudioBuffer(line.ja || '', 'ja');
+            if (jaArrayBuffer) {
+                var rawJaBuffer = await decodeCtx.decodeAudioData(jaArrayBuffer);
+                var adjustedJaBuffer = await createRescaledBuffer(decodeCtx, rawJaBuffer, jaRate);
+                segments.push({ buffer: adjustedJaBuffer, gapAfter: 0.25 });
+            }
+
+            // 2. Pause
+            var cleanEnText = (line.text || '').replace(/<[^>]*>/g, '').trim();
+            var wordCount = cleanEnText.split(/\s+/).filter(Boolean).length || 8;
+            var estimatedDurationSec = (wordCount / 2.5) / enRate;
+            estimatedDurationSec = Math.max(1.8, estimatedDurationSec);
+            segments.push({ buffer: null, gapAfter: estimatedDurationSec });
+
+            // 3. English
+            var enArrayBuffer = await fetchTTSAudioBuffer(cleanEnText, 'en');
+            if (enArrayBuffer) {
+                var rawEnBuffer = await decodeCtx.decodeAudioData(enArrayBuffer);
+                var adjustedEnBuffer = await createRescaledBuffer(decodeCtx, rawEnBuffer, enRate);
+                segments.push({ buffer: adjustedEnBuffer, gapAfter: 0.5 });
+            }
+
+            // Calculate duration
+            var sampleRate = 44100;
+            var totalDurationSec = 0.2;
+            segments.forEach(function(s) {
+                if (s.buffer) totalDurationSec += s.buffer.duration;
+                if (s.gapAfter) totalDurationSec += s.gapAfter;
+            });
+            totalDurationSec += 0.5;
+
+            var totalSamples = Math.max(1, Math.round(totalDurationSec * sampleRate));
+            var offlineMixCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, totalSamples, sampleRate);
+
+            var currentTime = 0.15;
+            segments.forEach(function(s) {
+                if (s.buffer) {
+                    var src = offlineMixCtx.createBufferSource();
+                    src.buffer = s.buffer;
+                    src.connect(offlineMixCtx.destination);
+                    src.start(currentTime);
+                    currentTime += s.buffer.duration;
+                }
+                if (s.gapAfter) currentTime += s.gapAfter;
+            });
+
+            return await offlineMixCtx.startRendering();
+        }
+
+        // Export a single line by index as MP3
+        async function exportSingleLineMp3(lineIndex) {
+            if (!activeScript || !activeScript.lines[lineIndex]) return;
+            var line = activeScript.lines[lineIndex];
+            var scriptNum = (scriptsList.findIndex(function(s) { return s.id === activeScript.id; }) + 1) || 1;
+            var seqNumStr = scriptNum + "-" + (lineIndex + 1);
+            var btn = document.getElementById('btn-export-line-' + lineIndex);
+            var originalBtnHtml = btn ? btn.innerHTML : '';
+
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
+                }
+                showToast("No." + seqNumStr + " のMP3音声を生成中...");
+
+                var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                var decodeCtx = new AudioCtxClass();
+
+                var compositeBuffer = await buildLineCompositeBuffer(decodeCtx, line);
+                decodeCtx.close();
+
+                var mp3Blob = audioBufferToMp3Blob(compositeBuffer, 160);
+                var mp3Url = URL.createObjectURL(mp3Blob);
+
+                var downloadLink = document.createElement('a');
+                downloadLink.href = mp3Url;
+                downloadLink.download = "No" + seqNumStr + "_" + (activeScript.title || "英語瞬発力") + ".mp3";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove();
+
+                showToast("No." + seqNumStr + " のMP3ダウンロードが完了しました！");
+            } catch (err) {
+                console.error("Single line MP3 export failed:", err);
+                showToast("No." + seqNumStr + " のMP3生成に失敗しました。");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
+            }
+        }
+
+        // Direct Trigger for Bulk MP3 Export from main controls
+        function startDirectBulkMp3Export() {
+            if (!activeScript || activeScript.lines.length === 0) {
+                showToast("出力対象のスクリプト行が存在しません。");
+                return;
+            }
+            openExportAudioModal();
+            setTimeout(function() {
+                startBulkMp3ZipExport();
+            }, 250);
+        }
+
+        // Bulk Export All Lines as Individual MP3 files inside a ZIP
+        async function startBulkMp3ZipExport() {
+            if (!activeScript || activeScript.lines.length === 0) {
+                showToast("出力対象のスクリプトが存在しません。");
+                return;
+            }
+
+            if (typeof JSZip === 'undefined' || typeof lamejs === 'undefined') {
+                showToast("MP3/ZIPライブラリをロード中です。少々お待ちください。");
+                return;
+            }
+
+            isExportingAudio = true;
+            var btnZip = document.getElementById('btn-export-zip');
+            var btnWav = document.getElementById('btn-start-export');
+            if (btnZip) btnZip.disabled = true;
+            if (btnWav) btnWav.disabled = true;
+
+            var progressArea = document.getElementById('export-progress-area');
+            var progressBar = document.getElementById('export-progress-bar');
+            var progressPct = document.getElementById('export-progress-pct');
+            var statusLabel = document.getElementById('export-status-label');
+            var detailLabel = document.getElementById('export-detail-label');
+            progressArea.classList.remove('hidden');
+
+            var zip = new JSZip();
+            var totalLines = activeScript.lines.length;
+            var scriptNum = (scriptsList.findIndex(function(s) { return s.id === activeScript.id; }) + 1) || 1;
+            var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+            var decodeCtx = new AudioCtxClass();
+
+            try {
+                for (var idx = 0; idx < totalLines; idx++) {
+                    if (!isExportingAudio) {
+                        decodeCtx.close();
+                        return;
+                    }
+
+                    var line = activeScript.lines[idx];
+                    var seqNumStr = scriptNum + "-" + (idx + 1);
+
+                    var currentPct = Math.round((idx / totalLines) * 90);
+                    progressBar.style.width = currentPct + "%";
+                    progressPct.textContent = currentPct + "%";
+                    statusLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> No.' + seqNumStr + ' / ' + scriptNum + '-' + totalLines + ' のMP3を合成中...';
+                    detailLabel.textContent = "日本語＋ポーズ＋英語を音声合成・MP3エンコード中: " + (line.text || '').substring(0, 35) + "...";
+
+                    var lineBuffer = await buildLineCompositeBuffer(decodeCtx, line);
+                    var mp3Blob = audioBufferToMp3Blob(lineBuffer, 160);
+
+                    var fileName = "No" + seqNumStr + "_" + (line.speaker === 'A' ? 'PersonA' : 'PersonB') + ".mp3";
+                    zip.file(fileName, mp3Blob);
+                }
+
+                decodeCtx.close();
+
+                // Generate ZIP
+                statusLabel.innerHTML = '<i class="fa-solid fa-file-zipper fa-spin text-indigo-600"></i> ZIPファイルを圧縮・パッケージ中...';
+                progressBar.style.width = "95%";
+                progressPct.textContent = "95%";
+                detailLabel.textContent = "全" + totalLines + "行のMP3ファイルをZIPアーカイブにまとめています...";
+
+                var zipBlob = await zip.generateAsync({ type: 'blob' }, function(metadata) {
+                    var p = 95 + Math.round(metadata.percent * 0.05);
+                    progressBar.style.width = p + "%";
+                    progressPct.textContent = p + "%";
+                });
+
+                var zipUrl = URL.createObjectURL(zipBlob);
+
+                progressBar.style.width = "100%";
+                progressPct.textContent = "100%";
+                statusLabel.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> MP3 ZIPアーカイブ生成完了！';
+                detailLabel.textContent = "合計: " + totalLines + "件のMP3ファイル (ZIPサイズ: " + (zipBlob.size / 1024 / 1024).toFixed(2) + " MB)";
+
+                // Automatic Download
+                var downloadLink = document.createElement('a');
+                downloadLink.href = zipUrl;
+                downloadLink.download = (activeScript.title || "英語瞬発力") + "_通し番号別MP3.zip";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove();
+
+                showToast("通し番号別MP3のZIPダウンロードが完了しました！");
+            } catch (err) {
+                console.error("Bulk MP3 Zip Export Error:", err);
+                statusLabel.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-600"></i> 出力エラーが発生しました';
+                detailLabel.textContent = "音声の合成またはMP3/ZIPの生成に失敗しました。";
+                showToast("MP3の出力中にエラーが発生しました。");
+            } finally {
+                isExportingAudio = false;
+                if (btnZip) btnZip.disabled = false;
+                if (btnWav) btnWav.disabled = false;
+            }
+        }
+
         function saveLineJaTranslation() {
             if (editingLineIndex === null || !activeScript) return;
             var newJa = document.getElementById('edit-line-ja-input').value.trim();
@@ -1481,9 +2342,14 @@
 
         function openEditTitleModal() {
             if (!activeScript) return;
-            document.getElementById('edit-script-title-input').value = activeScript.title;
-            document.getElementById('edit-speaker-a-input').value = activeScript.speakerA || 'Person A';
-            document.getElementById('edit-speaker-b-input').value = activeScript.speakerB || 'Person B';
+            var titleInput = document.getElementById('edit-script-title-input');
+            var spkAInput = document.getElementById('edit-speaker-a-input');
+            var spkBInput = document.getElementById('edit-speaker-b-input');
+
+            if (titleInput) titleInput.value = activeScript.title || '';
+            if (spkAInput) spkAInput.value = activeScript.speakerA || 'Person A';
+            if (spkBInput) spkBInput.value = activeScript.speakerB || 'Person B';
+
             document.getElementById('script-title-modal').classList.remove('hidden');
         }
 
@@ -1493,21 +2359,25 @@
 
         function saveScriptTitleAndSpeakers() {
             if (!activeScript) return;
-            var title = document.getElementById('edit-script-title-input').value.trim();
+            var titleInput = document.getElementById('edit-script-title-input');
+            var spkAInput = document.getElementById('edit-speaker-a-input');
+            var spkBInput = document.getElementById('edit-speaker-b-input');
+
+            var title = titleInput ? titleInput.value.trim() : '';
             if (!title) {
                 showToast("タイトルを入力してください。");
                 return;
             }
 
             activeScript.title = title;
-            activeScript.speakerA = document.getElementById('edit-speaker-a-input').value.trim() || 'Person A';
-            activeScript.speakerB = document.getElementById('edit-speaker-b-input').value.trim() || 'Person B';
+            activeScript.speakerA = spkAInput ? (spkAInput.value.trim() || 'Person A') : 'Person A';
+            activeScript.speakerB = spkBInput ? (spkBInput.value.trim() || 'Person B') : 'Person B';
 
             saveAllToStorage();
             populateScriptSelector();
             renderScriptContent();
             closeEditTitleModal();
-            showToast("スクリプトの基本情報を保存しました！");
+            showToast("スクリプト情報を保存しました！");
         }
 
         function deleteCurrentScript() {
@@ -1766,7 +2636,7 @@
 
         function exportBackupJSON() {
             var backupData = {
-                version: "2.0",
+                version: "2.1",
                 exportDate: new Date().toISOString(),
                 scripts: scriptsList,
                 voiceSettings: {
@@ -1776,8 +2646,10 @@
                     selectedVoiceB_JA_URI: selectedVoiceB_JA_URI
                 },
                 speeds: {
-                    currentJaSpeed: currentJaSpeed,
-                    currentEnSpeed: currentEnSpeed
+                    speedA_JA: speedA_JA,
+                    speedA_EN: speedA_EN,
+                    speedB_JA: speedB_JA,
+                    speedB_EN: speedB_EN
                 }
             };
 
@@ -1809,8 +2681,10 @@
                             selectedVoiceB_JA_URI = parsed.voiceSettings.selectedVoiceB_JA_URI || '';
                         }
                         if (parsed.speeds) {
-                            currentJaSpeed = parsed.speeds.currentJaSpeed || 1.0;
-                            currentEnSpeed = parsed.speeds.currentEnSpeed || 1.0;
+                            speedA_JA = parsed.speeds.speedA_JA || 1.0;
+                            speedA_EN = parsed.speeds.speedA_EN || 1.0;
+                            speedB_JA = parsed.speeds.speedB_JA || 1.0;
+                            speedB_EN = parsed.speeds.speedB_EN || 1.0;
                         }
 
                         saveAllToStorage();
@@ -1820,7 +2694,7 @@
                         populateScriptSelector();
                         resetLineStates();
                         renderScriptContent();
-                        updateSpeedButtonsUI();
+                        updateSpeedSlidersUI();
                         closeBackupModal();
 
                         showToast("バックアップデータからすべてのスクリプトを復元しました！");
