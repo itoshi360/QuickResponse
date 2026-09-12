@@ -10,15 +10,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Mammoth.js for Word (.docx) Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
     <style>
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f8fafc;
         }
         .active-card {
             border-left: 6px solid #6366f1;
             background-color: #f0fdf4 !important;
-            transform: scale(1.01);
+            transform: scale(1.005);
             box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.15);
         }
         .speaker-a-badge {
@@ -66,134 +69,141 @@
 </head>
 <body class="min-h-screen text-slate-800 flex flex-col justify-between">
 
-    <header class="bg-indigo-700 text-white shadow-lg sticky top-0 z-30">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
-            <div class="flex items-center space-x-3 cursor-pointer" onclick="resetPlayback()">
-                <div class="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition">
-                    <i class="fa-solid fa-bolt text-xl text-indigo-100"></i>
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-4xl mx-auto px-3 py-2 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-2.5 cursor-pointer" onclick="resetPlayback()">
+                <div class="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition shadow-inner">
+                    <i class="fa-solid fa-bolt text-lg text-indigo-100"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg md:text-xl tracking-tight leading-none flex items-center gap-2">
+                    <h1 class="font-bold text-base md:text-lg tracking-tight leading-none flex items-center gap-2">
                         英語瞬発力トレーナー
                     </h1>
-                    <span id="current-script-badge" class="text-xs text-indigo-200 font-medium">スクリプト: 戸隠トレラン＆230km挑戦</span>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span id="current-script-badge" class="text-[11px] text-indigo-200 font-medium truncate max-w-[180px] sm:max-w-xs">
+                            スクリプト: 会話260911_映画マイケル
+                        </span>
+                        <button onclick="openEditTitleModal()" class="text-indigo-200 hover:text-white transition p-0.5 text-xs" title="タイトル・話者名を編集">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- Header Actions -->
-            <div class="flex items-center gap-2 flex-wrap">
-                <!-- Script Selector -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <!-- Script Selector Dropdown -->
                 <div class="relative">
-                    <select id="script-select" onchange="switchScript(this.value)" class="text-xs md:text-sm bg-indigo-800 text-white font-semibold px-3 py-1.5 pr-8 rounded-xl border border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 appearance-none cursor-pointer">
-                        <!-- Populated via JavaScript -->
+                    <select id="script-select" onchange="switchScript(this.value)" class="text-xs bg-indigo-800 text-white font-semibold px-2.5 py-1 pr-7 rounded-lg border border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 appearance-none cursor-pointer">
+                        <!-- Populated via JS -->
                     </select>
-                    <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-indigo-200 pointer-events-none"></i>
+                    <i class="fa-solid fa-chevron-down absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-indigo-200 pointer-events-none"></i>
                 </div>
 
                 <!-- Add Script Button -->
-                <button onclick="openScriptModal()" class="text-xs md:text-sm bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl transition font-bold flex items-center gap-1.5 shadow-sm">
-                    <i class="fa-solid fa-plus"></i> <span>スクリプト追加</span>
+                <button onclick="openScriptModal()" class="text-xs bg-emerald-500 hover:bg-emerald-600 text-white px-2.5 py-1 rounded-lg transition font-bold flex items-center gap-1 shadow-sm">
+                    <i class="fa-solid fa-file-word"></i> <span>スクリプト追加</span>
+                </button>
+
+                <!-- Backup Modal Button -->
+                <button onclick="openBackupModal()" class="text-xs bg-indigo-600 hover:bg-indigo-800 text-white px-2 py-1 rounded-lg transition font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> <span class="hidden md:inline">バックアップ</span>
                 </button>
 
                 <!-- Voice Settings Modal Button -->
-                <button onclick="openVoiceModal()" class="text-xs md:text-sm bg-indigo-600 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-xl transition font-medium flex items-center gap-1.5">
+                <button onclick="openVoiceModal()" class="text-xs bg-indigo-600 hover:bg-indigo-800 text-white px-2 py-1 rounded-lg transition font-medium flex items-center gap-1">
                     <i class="fa-solid fa-sliders"></i> <span class="hidden sm:inline">音声設定</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 py-6 w-full flex-grow space-y-5">
+    <main class="max-w-4xl mx-auto px-4 py-3 w-full flex-grow space-y-3">
 
         <!-- Controller Sticky Player Card -->
-        <div class="bg-white rounded-2xl shadow-md border border-slate-200 p-4 sm:p-5 sticky top-16 z-20 space-y-4">
+        <div class="bg-white rounded-xl shadow-md border border-slate-200 p-3 sticky top-11 z-20 space-y-2.5">
             
-            <!-- Flow Explanation / Current Step Banner -->
-            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
-                    <span class="text-indigo-600 font-black">【読み上げ順序】</span>
-                    <span class="px-2 py-0.5 rounded bg-red-100 text-red-700">1. 日本語</span>
-                    <span>➔</span>
-                    <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">2. 空白(発声タイム)</span>
-                    <span>➔</span>
-                    <span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">3. 英語</span>
+            <!-- Compact Status & Quick Action Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-700">
+                <div id="active-step-status" class="text-xs font-black px-2.5 py-1 rounded-lg bg-slate-200 text-slate-600 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-dot"></i> <span>待機中</span>
                 </div>
 
-                <div id="active-step-status" class="text-xs font-black px-3 py-1 rounded-lg bg-slate-200 text-slate-600 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-circle-dot"></i> <span>待機中</span>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <button onclick="hideAllEnglish()" class="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-600 rounded-md border border-slate-300 transition flex items-center gap-1 text-[11px]">
+                        <i class="fa-solid fa-eye-slash"></i> <span>全英語を隠す</span>
+                    </button>
+                    <button onclick="showAllEnglish()" class="px-2 py-0.5 bg-white hover:bg-slate-100 text-slate-600 rounded-md border border-slate-300 transition flex items-center gap-1 text-[11px]">
+                        <i class="fa-solid fa-eye"></i> <span>全英語を表示</span>
+                    </button>
+                    <button onclick="openEditTitleModal()" class="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 transition flex items-center gap-1 text-[11px]">
+                        <i class="fa-solid fa-pen"></i> <span>情報編集</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Playback Speed & Options Bar -->
-            <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
-                <!-- Speed Controls -->
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-gauge-high text-indigo-600 text-base"></i>
-                    <span class="text-xs sm:text-sm font-bold text-slate-700">再生速度:</span>
-                    <span id="speed-display" class="text-sm font-black text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200">1.00x</span>
-                </div>
-
-                <!-- Preset Speed Buttons -->
-                <div class="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                    <button onclick="setSpeed(0.5)" class="speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="0.5">0.5x</button>
-                    <button onclick="setSpeed(0.75)" class="speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="0.75">0.75x</button>
-                    <button onclick="setSpeed(1.0)" class="speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-indigo-500 bg-indigo-600 text-white" data-speed="1.0">1.0x</button>
-                    <button onclick="setSpeed(1.25)" class="speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="1.25">1.25x</button>
-                    <button onclick="setSpeed(1.5)" class="speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="1.5">1.5x</button>
-                    <button onclick="setSpeed(2.0)" class="speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="2.0">2.0x</button>
-                </div>
-
-                <!-- Pause Multiplier Dropdown & Actions -->
-                <div class="flex items-center gap-3 flex-wrap text-xs font-bold text-slate-700">
-                    <div class="flex items-center gap-1.5">
-                        <span>ポーズ長さ:</span>
-                        <select id="pause-multiplier" onchange="currentPauseMultiplier = parseFloat(this.value)" class="bg-white border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500 text-slate-800">
-                            <option value="1.0" selected>英語と同等 (1.0倍)</option>
-                            <option value="1.2">少し長め (1.2倍)</option>
-                            <option value="1.5">長め (1.5倍)</option>
-                            <option value="2.0">ゆったり (2.0倍)</option>
-                        </select>
+            <!-- Independent Language Speed Controls Bar -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200/80">
+                <!-- Japanese Audio Speed -->
+                <div class="flex items-center justify-between gap-1.5 bg-white p-1.5 rounded-md border border-slate-200">
+                    <div class="flex items-center gap-1 text-[11px] font-bold text-slate-700">
+                        <span>🇯🇵</span>
+                        <span>日本語:</span>
+                        <span id="ja-speed-display" class="text-[11px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">1.00x</span>
                     </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="setJaSpeed(0.75)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700" data-speed="0.75">0.75x</button>
+                        <button onclick="setJaSpeed(1.0)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-rose-500 bg-rose-600 text-white" data-speed="1.0">1.0x</button>
+                        <button onclick="setJaSpeed(1.25)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700" data-speed="1.25">1.25x</button>
+                        <button onclick="setJaSpeed(1.5)" class="ja-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700" data-speed="1.5">1.5x</button>
+                    </div>
+                </div>
 
-                    <button onclick="hideAllEnglish()" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-300 transition flex items-center gap-1 text-[11px]">
-                        <i class="fa-solid fa-eye-slash"></i> <span>全英語を隠す</span>
-                    </button>
-
-                    <button onclick="openVoiceModal()" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition flex items-center gap-1 text-[11px]">
-                        <i class="fa-solid fa-sliders"></i> <span>音声コンフィグ設定</span>
-                    </button>
+                <!-- English Audio Speed -->
+                <div class="flex items-center justify-between gap-1.5 bg-white p-1.5 rounded-md border border-slate-200">
+                    <div class="flex items-center gap-1 text-[11px] font-bold text-slate-700">
+                        <span>🇺🇸</span>
+                        <span>英語:</span>
+                        <span id="en-speed-display" class="text-[11px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">1.00x</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="setEnSpeed(0.75)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="0.75">0.75x</button>
+                        <button onclick="setEnSpeed(1.0)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-indigo-500 bg-indigo-600 text-white" data-speed="1.0">1.0x</button>
+                        <button onclick="setEnSpeed(1.25)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="1.25">1.25x</button>
+                        <button onclick="setEnSpeed(1.5)" class="en-speed-btn px-1.5 py-0.5 text-[11px] font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700" data-speed="1.5">1.5x</button>
+                    </div>
                 </div>
             </div>
 
             <!-- Main Audio Controls -->
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <!-- Playback Action Buttons -->
-                <div class="flex items-center gap-2">
-                    <button id="btn-play" onclick="togglePlayPause()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md transition active:scale-95 flex items-center gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5 border-t border-slate-100">
+                <!-- Playback Buttons -->
+                <div class="flex items-center gap-1.5">
+                    <button id="btn-play" onclick="togglePlayPause()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-sm transition active:scale-95 flex items-center gap-1.5">
                         <i id="play-icon" class="fa-solid fa-play"></i> <span id="play-text">最初から再生</span>
                     </button>
 
-                    <button onclick="stopPlayback()" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition flex items-center gap-1.5" title="停止">
+                    <button onclick="stopPlayback()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition flex items-center gap-1" title="停止">
                         <i class="fa-solid fa-square"></i> <span class="hidden sm:inline">停止</span>
                     </button>
 
-                    <button onclick="prevLine()" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition" title="前の行へ">
+                    <button onclick="prevLine()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition" title="前の行へ">
                         <i class="fa-solid fa-backward-step"></i>
                     </button>
 
-                    <button onclick="repeatCurrentLine()" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition" title="現在の行をリピート">
+                    <button onclick="repeatCurrentLine()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition" title="現在の行をリピート">
                         <i class="fa-solid fa-rotate-right"></i>
                     </button>
 
-                    <button onclick="nextLine()" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition" title="次の行へ">
+                    <button onclick="nextLine()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg transition" title="次の行へ">
                         <i class="fa-solid fa-forward-step"></i>
                     </button>
                 </div>
 
                 <!-- Auto-scroll Toggle -->
-                <div class="flex items-center gap-3 text-xs font-semibold text-slate-600">
-                    <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                        <input type="checkbox" id="toggle-autoscroll" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    <label class="flex items-center gap-1 cursor-pointer select-none">
+                        <input type="checkbox" id="toggle-autoscroll" checked class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                         <span>自動スクロール</span>
                     </label>
                 </div>
@@ -201,36 +211,120 @@
 
             <!-- Progress Bar -->
             <div>
-                <div class="flex justify-between text-[11px] font-bold text-slate-400 mb-1">
+                <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-0.5">
                     <span>進行状況</span>
                     <span id="progress-indicator">行 0 / 0</span>
                 </div>
-                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                     <div id="progress-bar-fill" class="bg-indigo-600 h-full transition-all duration-300" style="width: 0%"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Conversation Script Display Area -->
+        <!-- Dynamic Conversation Cards -->
         <div id="script-container" class="space-y-3">
-            <!-- Dynamic Dialogue Cards render here -->
+            <!-- Dynamic lines render here -->
         </div>
 
     </main>
 
-    <!-- Toast Notification Message Box -->
-    <div id="toast-msg" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2.5 rounded-xl shadow-xl z-50 text-xs font-bold flex items-center gap-2 transition-all">
-        <i class="fa-solid fa-circle-info text-amber-400"></i>
+    <!-- Toast Notification Message -->
+    <div id="toast-msg" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl z-50 text-xs font-bold flex items-center gap-2.5 transition-all border border-slate-700">
+        <i class="fa-solid fa-circle-info text-amber-400 text-base"></i>
         <span id="toast-text">メッセージ</span>
     </div>
 
-    <!-- Modal: Add Custom Script -->
+    <!-- Modal: Script Single Line Japanese Translation Edit -->
+    <div id="line-edit-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4 fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-language text-rose-500"></i> 日本語訳の手動修正
+                </h3>
+                <button onclick="closeLineEditModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-500 mb-1">原文（英語）</label>
+                    <div id="edit-line-en-text" class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-800 text-sm leading-relaxed">
+                        <!-- En text -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">修正後の日本語訳 <span class="text-red-500">*</span></label>
+                    <textarea id="edit-line-ja-input" rows="3" class="w-full font-medium text-sm p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 text-slate-800 leading-relaxed"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeLineEditModal()" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-xl border border-slate-300 text-xs">
+                    キャンセル
+                </button>
+                <button onclick="saveLineJaTranslation()" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow transition text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i> 日本語訳を更新
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Script Title & Speaker Names Edit -->
+    <div id="script-title-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4 fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-indigo-600"></i> スクリプト基本情報の編集
+                </h3>
+                <button onclick="closeEditTitleModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">スクリプトのタイトル <span class="text-red-500">*</span></label>
+                    <input type="text" id="edit-script-title-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">話者A の名称</label>
+                        <input type="text" id="edit-speaker-a-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-medium">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">話者B の名称</label>
+                        <input type="text" id="edit-speaker-b-input" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-medium">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between pt-2">
+                <button onclick="deleteCurrentScript()" class="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl border border-red-200 text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-trash"></i> 削除
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="closeEditTitleModal()" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-xl border border-slate-300 text-xs">
+                        キャンセル
+                    </button>
+                    <button onclick="saveScriptTitleAndSpeakers()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow transition text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> 保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add New Custom Script / Word Doc Import -->
     <div id="script-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden fade-in">
             <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                 <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-file-circle-plus text-indigo-600 text-xl"></i>
-                    <h3 class="font-bold text-slate-800 text-base md:text-lg">新しい対話スクリプトを追加</h3>
+                    <i class="fa-solid fa-file-word text-indigo-600 text-xl"></i>
+                    <h3 class="font-bold text-slate-800 text-base md:text-lg">Word・テキストスクリプトの追加</h3>
                 </div>
                 <button onclick="closeScriptModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
                     <i class="fa-solid fa-xmark text-lg"></i>
@@ -239,34 +333,34 @@
 
             <div class="p-6 overflow-y-auto space-y-4 text-sm text-slate-600 custom-scrollbar">
                 <!-- File Upload Drop Zone -->
-                <div class="bg-indigo-50/70 hover:bg-indigo-100/60 border-2 border-dashed border-indigo-300 hover:border-indigo-500 rounded-2xl p-4 text-center transition cursor-pointer group" onclick="document.getElementById('modal-script-file').click()" ondragover="event.preventDefault(); this.classList.add('border-indigo-600','bg-indigo-100');" ondragleave="this.classList.remove('border-indigo-600','bg-indigo-100')" ondrop="handleFileDrop(event)">
-                    <input type="file" id="modal-script-file" accept=".txt,.csv,.json,.tsv" onchange="handleScriptFileUpload(event)" class="hidden">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition shadow-md">
-                        <i class="fa-solid fa-file-arrow-up text-lg"></i>
+                <div class="bg-indigo-50/70 hover:bg-indigo-100/60 border-2 border-dashed border-indigo-300 hover:border-indigo-500 rounded-2xl p-5 text-center transition cursor-pointer group" onclick="document.getElementById('modal-script-file').click()" ondragover="event.preventDefault(); this.classList.add('border-indigo-600','bg-indigo-100');" ondragleave="this.classList.remove('border-indigo-600','bg-indigo-100')" ondrop="handleFileDrop(event)">
+                    <input type="file" id="modal-script-file" accept=".docx,.txt,.csv,.json,.tsv" onchange="handleScriptFileUpload(event)" class="hidden">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition shadow-md">
+                        <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
                     </div>
-                    <p class="text-xs font-bold text-indigo-900">ファイルを選択、またはここにドロップ</p>
-                    <p class="text-[11px] text-slate-500 mt-1">対応ファイル形式: <span class="font-mono text-indigo-700 bg-white px-1 py-0.5 rounded border border-indigo-200">.txt</span> <span class="font-mono text-indigo-700 bg-white px-1 py-0.5 rounded border border-indigo-200">.csv</span> <span class="font-mono text-indigo-700 bg-white px-1 py-0.5 rounded border border-indigo-200">.json</span> <span class="font-mono text-indigo-700 bg-white px-1 py-0.5 rounded border border-indigo-200">.tsv</span></p>
+                    <p class="text-xs font-bold text-indigo-900">Word (.docx) または テキスト・CSV・JSONをドロップ</p>
+                    <p class="text-[11px] text-slate-500 mt-1">✨ Word内の <span class="font-mono bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-700">Person A:</span> / <span class="font-mono bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-700">Person B:</span> を自動認識＆全英文に自動日本語訳を付与します</p>
                 </div>
 
                 <div class="flex items-center my-2">
                     <div class="flex-grow border-t border-slate-200"></div>
-                    <span class="px-3 text-xs text-slate-400 font-bold">または直接手入力</span>
+                    <span class="px-3 text-xs text-slate-400 font-bold">または直接テキストを入力</span>
                     <div class="flex-grow border-t border-slate-200"></div>
                 </div>
 
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">スクリプトのタイトル <span class="text-red-500">*</span></label>
-                    <input type="text" id="modal-script-title" placeholder="例: 空港でのチェックイン英会話" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800">
+                    <label class="block font-bold text-slate-700 mb-1">スクリプトタイトル <span class="text-red-500">*</span></label>
+                    <input type="text" id="modal-script-title" placeholder="例: 映画マイケルについての会話" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800">
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">話者A の名前</label>
-                        <input type="text" id="modal-speaker-a" placeholder="例: Speaker A" value="Speaker A" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+                        <label class="block font-bold text-slate-700 mb-1">話者A の名称</label>
+                        <input type="text" id="modal-speaker-a" placeholder="例: Person A" value="Person A" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">話者B の名前</label>
-                        <input type="text" id="modal-speaker-b" placeholder="例: Speaker B" value="Speaker B" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+                        <label class="block font-bold text-slate-700 mb-1">話者B の名称</label>
+                        <input type="text" id="modal-speaker-b" placeholder="例: Person B" value="Person B" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
                     </div>
                 </div>
 
@@ -274,152 +368,102 @@
                     <div class="flex justify-between items-center mb-1">
                         <label class="block font-bold text-slate-700">対話テキストデータ <span class="text-red-500">*</span></label>
                         <button onclick="insertSampleScriptText()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold underline">
-                            サンプル入力を挿入
+                            サンプル入力を補完
                         </button>
                     </div>
-                    <p class="text-xs text-slate-400 mb-2">フォーマット: 1行ずつ 「話者名: 英語本文 | 日本語訳」 の形式で入力してください。</p>
-                    <textarea id="modal-script-text" rows="8" placeholder="A: Hello, how are you? | こんにちは、お元気ですか？&#10;B: I am doing great! | とても元気ですよ！" class="w-full font-mono text-xs p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"></textarea>
+                    <p class="text-xs text-slate-400 mb-2">形式: 1行ずつ 「話者名: 英語本文 | 日本語訳」 または 「話者名: 英語本文」</p>
+                    <textarea id="modal-script-text" rows="7" placeholder="Person A: Good morning! | おはよう！&#10;Person B: How are you doing today? | 今日のお調子はいかがですか？" class="w-full font-mono text-xs p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"></textarea>
                 </div>
             </div>
 
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                <button onclick="closeScriptModal()" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-xl border border-slate-300 transition text-sm">
+                <button onclick="closeScriptModal()" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-xl border border-slate-300 transition text-xs">
                     キャンセル
                 </button>
-                <button onclick="saveCustomScript()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-check"></i> スクリプトを登録
+                <button onclick="saveCustomScript()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i> スクリプトを取り込んで登録
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Voice Settings -->
+    <!-- Modal: Voice & Gender Config -->
     <div id="voice-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-xl w-full p-6 space-y-5 fade-in max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                 <div>
                     <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-indigo-600"></i> 話者別 音声コンフィグ設定
+                        <i class="fa-solid fa-sliders text-indigo-600"></i> 話者別 高音質音声モデルの設定
                     </h3>
-                    <p class="text-xs text-slate-500 mt-0.5">話者A・話者Bの日本語・英語（USのみ・男女別）の音声モデルを設定できます</p>
+                    <p class="text-xs text-slate-500 mt-0.5">※自然でクリアな高音質ボイス（HQ/Neural/Natural等）のみを厳選して表示しています</p>
                 </div>
                 <button onclick="closeVoiceModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <!-- High Quality Voice Filter Toggle -->
-            <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center justify-between">
-                <div class="flex items-center gap-2 text-xs font-bold text-amber-900">
-                    <i class="fa-solid fa-wand-magic-sparkles text-amber-600 text-sm"></i>
-                    <span>高音質ボイスのみを表示（推奨）</span>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggle-hq-only" checked onchange="initVoiceEngines()" class="sr-only peer">
-                    <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
-                </label>
-            </div>
-
-            <!-- Speaker A Voice Config -->
-            <div class="bg-blue-50/60 border border-blue-100 p-4 rounded-xl space-y-3">
+            <!-- Speaker A Config -->
+            <div class="bg-blue-50/70 border border-blue-100 p-4 rounded-xl space-y-3">
                 <div class="flex items-center justify-between border-b border-blue-100 pb-2">
-                    <span class="font-bold text-sm text-blue-800 flex items-center gap-1.5">
+                    <span class="font-bold text-sm text-blue-900 flex items-center gap-1.5">
                         <i class="fa-solid fa-user-tie"></i> 話者 A (Speaker A)
                     </span>
-                    <span class="text-[11px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full font-bold">日本語 / 英語(US) 設定</span>
+                    <span class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">高音質モデル選択</span>
                 </div>
 
-                <div class="space-y-3">
-                    <!-- 1. 日本語音声 -->
-                    <div class="space-y-1.5 bg-white/80 p-2.5 rounded-lg border border-blue-100">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1 bg-white/90 p-2.5 rounded-lg border border-blue-100">
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-bold text-rose-700 flex items-center gap-1">
-                                <i class="fa-solid fa-language text-rose-500"></i> 1. 日本語音声 (Japanese Voice)
-                            </label>
-                            <button onclick="testVoice('A', 'ja')" class="text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold px-2.5 py-0.5 rounded-lg transition flex items-center gap-1">
-                                <i class="fa-solid fa-volume-high text-[10px]"></i> 日本語試聴
-                            </button>
+                            <label class="text-[11px] font-bold text-rose-700">🇯🇵 日本語音声</label>
+                            <button onclick="testVoice('A', 'ja')" class="text-[10px] bg-rose-600 text-white font-bold px-2 py-0.5 rounded hover:bg-rose-700">試聴</button>
                         </div>
-                        <select id="voice-select-a-ja" onchange="onVoiceSelected('A', 'ja', this.value)" class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-500 font-medium text-slate-800">
-                            <!-- Populated dynamically -->
+                        <select id="voice-select-a-ja" onchange="onVoiceSelected('A', 'ja', this.value)" class="w-full text-xs p-1.5 border border-slate-300 rounded bg-white text-slate-800 font-medium">
                         </select>
                     </div>
 
-                    <!-- 2. 性別選択 & US英語音声 -->
-                    <div class="space-y-2 bg-white/80 p-2.5 rounded-lg border border-blue-100">
+                    <div class="space-y-1 bg-white/90 p-2.5 rounded-lg border border-blue-100">
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-bold text-blue-700 flex items-center gap-1">
-                                <i class="fa-solid fa-globe text-blue-500"></i> 2. 英語音声 (US English Voice)
-                            </label>
-                            <div class="flex items-center gap-2">
-                                <select id="gender-select-a" onchange="onGenderChanged('A', this.value)" class="text-xs px-2 py-0.5 border border-blue-300 rounded-md bg-blue-50 text-blue-800 font-bold">
-                                    <option value="female">女性 (Female)</option>
-                                    <option value="male">男性 (Male)</option>
-                                    <option value="all">すべての性別</option>
-                                </select>
-                                <button onclick="testVoice('A', 'en')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-0.5 rounded-lg transition flex items-center gap-1">
-                                    <i class="fa-solid fa-volume-high text-[10px]"></i> 英語試聴
-                                </button>
-                            </div>
+                            <label class="text-[11px] font-bold text-indigo-700">🇺🇸 英語音声</label>
+                            <button onclick="testVoice('A', 'en')" class="text-[10px] bg-indigo-600 text-white font-bold px-2 py-0.5 rounded hover:bg-indigo-700">試聴</button>
                         </div>
-                        <select id="voice-select-a-en" onchange="onVoiceSelected('A', 'en', this.value)" class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-800">
-                            <!-- Populated dynamically -->
+                        <select id="voice-select-a-en" onchange="onVoiceSelected('A', 'en', this.value)" class="w-full text-xs p-1.5 border border-slate-300 rounded bg-white text-slate-800 font-medium">
                         </select>
                     </div>
                 </div>
             </div>
 
-            <!-- Speaker B Voice Config -->
-            <div class="bg-emerald-50/60 border border-emerald-100 p-4 rounded-xl space-y-3">
+            <!-- Speaker B Config -->
+            <div class="bg-emerald-50/70 border border-emerald-100 p-4 rounded-xl space-y-3">
                 <div class="flex items-center justify-between border-b border-emerald-100 pb-2">
-                    <span class="font-bold text-sm text-emerald-800 flex items-center gap-1.5">
+                    <span class="font-bold text-sm text-emerald-900 flex items-center gap-1.5">
                         <i class="fa-solid fa-user-gear"></i> 話者 B (Speaker B)
                     </span>
-                    <span class="text-[11px] text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full font-bold">日本語 / 英語(US) 設定</span>
+                    <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">高音質モデル選択</span>
                 </div>
 
-                <div class="space-y-3">
-                    <!-- 1. 日本語音声 -->
-                    <div class="space-y-1.5 bg-white/80 p-2.5 rounded-lg border border-emerald-100">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1 bg-white/90 p-2.5 rounded-lg border border-emerald-100">
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-bold text-rose-700 flex items-center gap-1">
-                                <i class="fa-solid fa-language text-rose-500"></i> 1. 日本語音声 (Japanese Voice)
-                            </label>
-                            <button onclick="testVoice('B', 'ja')" class="text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold px-2.5 py-0.5 rounded-lg transition flex items-center gap-1">
-                                <i class="fa-solid fa-volume-high text-[10px]"></i> 日本語試聴
-                            </button>
+                            <label class="text-[11px] font-bold text-rose-700">🇯🇵 日本語音声</label>
+                            <button onclick="testVoice('B', 'ja')" class="text-[10px] bg-rose-600 text-white font-bold px-2 py-0.5 rounded hover:bg-rose-700">試聴</button>
                         </div>
-                        <select id="voice-select-b-ja" onchange="onVoiceSelected('B', 'ja', this.value)" class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-rose-500 font-medium text-slate-800">
-                            <!-- Populated dynamically -->
+                        <select id="voice-select-b-ja" onchange="onVoiceSelected('B', 'ja', this.value)" class="w-full text-xs p-1.5 border border-slate-300 rounded bg-white text-slate-800 font-medium">
                         </select>
                     </div>
 
-                    <!-- 2. 性別選択 & US英語音声 -->
-                    <div class="space-y-2 bg-white/80 p-2.5 rounded-lg border border-emerald-100">
+                    <div class="space-y-1 bg-white/90 p-2.5 rounded-lg border border-emerald-100">
                         <div class="flex justify-between items-center">
-                            <label class="text-xs font-bold text-emerald-700 flex items-center gap-1">
-                                <i class="fa-solid fa-globe text-emerald-500"></i> 2. 英語音声 (US English Voice)
-                            </label>
-                            <div class="flex items-center gap-2">
-                                <select id="gender-select-b" onchange="onGenderChanged('B', this.value)" class="text-xs px-2 py-0.5 border border-emerald-300 rounded-md bg-emerald-50 text-emerald-800 font-bold">
-                                    <option value="male" selected>男性 (Male)</option>
-                                    <option value="female">女性 (Female)</option>
-                                    <option value="all">すべての性別</option>
-                                </select>
-                                <button onclick="testVoice('B', 'en')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-0.5 rounded-lg transition flex items-center gap-1">
-                                    <i class="fa-solid fa-volume-high text-[10px]"></i> 英語試聴
-                                </button>
-                            </div>
+                            <label class="text-[11px] font-bold text-emerald-700">🇺🇸 英語音声</label>
+                            <button onclick="testVoice('B', 'en')" class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded hover:bg-emerald-700">試聴</button>
                         </div>
-                        <select id="voice-select-b-en" onchange="onVoiceSelected('B', 'en', this.value)" class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-800">
-                            <!-- Populated dynamically -->
+                        <select id="voice-select-b-en" onchange="onVoiceSelected('B', 'en', this.value)" class="w-full text-xs p-1.5 border border-slate-300 rounded bg-white text-slate-800 font-medium">
                         </select>
                     </div>
                 </div>
             </div>
 
             <div class="pt-2 flex justify-between items-center">
-                <span class="text-[11px] text-slate-400">※米国英語(en-US)のネイティブ音声を厳選しています。</span>
+                <span class="text-[11px] text-slate-400">※各メニューに [女性] [男性] の性別識別を表示しています。</span>
                 <button onclick="closeVoiceModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition">
                     保存して閉じる
                 </button>
@@ -427,148 +471,202 @@
         </div>
     </div>
 
+    <!-- Modal: Auto-Backup & Data Export/Import -->
+    <div id="backup-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4 fade-in">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up text-indigo-600"></i> データ自動バックアップ & 復元
+                </h3>
+                <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold text-indigo-900">
+                    <span>クラウド/ローカル同期状態:</span>
+                    <span id="backup-status-badge" class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">アクティブ同期中</span>
+                </div>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                    訓練の進捗（再生回数・リピート設定）、修正した和訳、追加したWordスクリプトはブラウザおよびローカルストレージへリアルタイムで自動バックアップされています。
+                </p>
+                <div id="last-backup-time" class="text-[11px] font-mono text-indigo-700">
+                    最終自動バックアップ: --
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h4 class="font-bold text-xs text-slate-700">ファイル書き出し・復元（バックアップファイルの保存）</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="exportBackupJSON()" class="p-3 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl text-left transition group">
+                        <div class="font-bold text-xs text-indigo-600 group-hover:underline flex items-center gap-1">
+                            <i class="fa-solid fa-download"></i> JSON出力 (エクスポート)
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">全スクリプトと進捗をファイルに保存</div>
+                    </button>
+
+                    <button onclick="document.getElementById('import-json-file').click()" class="p-3 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl text-left transition group">
+                        <input type="file" id="import-json-file" accept=".json" onchange="importBackupJSON(event)" class="hidden">
+                        <div class="font-bold text-xs text-emerald-600 group-hover:underline flex items-center gap-1">
+                            <i class="fa-solid fa-upload"></i> JSON復元 (インポート)
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">以前のバックアップを取り込み</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeBackupModal()" class="px-5 py-2 bg-slate-800 text-white font-bold text-xs rounded-xl shadow hover:bg-slate-900 transition">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="bg-slate-100 border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        英語瞬発力トレーナー &bull; Japanese ➔ Pause ➔ English Auto-Player
+        英語瞬発力トレーナー &bull; 独立速度制御・Word自動和訳解析 & データ自動同期型
     </footer>
 
     <script>
-        const defaultScript = {
+        // Default Scripts Dataset Definition
+        var michaelMovieScript = {
+            id: 'michael_movie_script',
+            title: '会話260911_映画マイケル',
+            speakerA: 'Person A',
+            speakerB: 'Person B',
+            lines: [
+                { speaker: 'A', text: "Good morning, Gemini! I'd <span class=\"text-red-600 font-bold\">like to</span> practice my English with you today by having a short conversation.", ja: "おはよう、Gemini！今日は短い会話をして英語の練習をしたいです。" },
+                { speaker: 'B', text: "Good morning! I’d <span class=\"text-red-600 font-bold\">love to</span> help. How did you <span class=\"text-red-600 font-bold\">start your day</span> today?", ja: "おはようございます！ぜひお手伝いさせてください。今日はどのように一日を始めましたか？" },
+                { speaker: 'A', text: "Actually, I’d like to talk about the movie Michael.", ja: "実は、映画『マイケル』について話したいんです。" },
+                { speaker: 'A', text: "When I was younger, I <span class=\"text-red-600 font-bold\">wasn't really interested in</span> his music or performance, but watching the movie after its release <span class=\"text-red-600 font-bold\">completely changed my perspective</span>.", ja: "若い頃は彼の音楽やパフォーマンスにあまり興味がなかったのですが、公開後に映画を見て見方が完全に変わりました。" },
+                { speaker: 'B', text: "It’s <span class=\"text-red-600 font-bold\">fascinating</span> how a film can <span class=\"text-red-600 font-bold\">change your view</span> like that!", ja: "映画がそんな風に見方を変えてくれるなんて魅力的ですね！" },
+                { speaker: 'B', text: "What <span class=\"text-red-600 font-bold\">specific aspects</span> of his life <span class=\"text-red-600 font-bold\">stood out to</span> you?", ja: "彼の人生のどんな部分が特に印象に残りましたか？" },
+                { speaker: 'A', text: "I was <span class=\"text-red-600 font-bold\">deeply touched by</span> his <span class=\"text-red-600 font-bold\">compassion</span> for children and how he <span class=\"text-red-600 font-bold\">frequently</span> visited hospitals to <span class=\"text-red-600 font-bold\">bring them joy</span>.", ja: "子供たちへの思いやりや、彼らを喜ばせるために頻繁に病院を訪れていたことに深く感動しました。" },
+                { speaker: 'A', text: "Besides his personality, his <span class=\"text-red-600 font-bold\">incredible</span> dancing really <span class=\"text-red-600 font-bold\">captured my attention</span>.", ja: "彼の人柄だけでなく、彼の素晴らしいダンスにも本当に心を奪われました。" },
+                { speaker: 'B', text: "Jaafar Jackson’s <span class=\"text-red-600 font-bold\">portrayal</span> really <span class=\"text-red-600 font-bold\">brought those iconic moves to life</span> on screen, didn't he?", ja: "ジャファー・ジャクソンの演技は、スクリーン上でそれらの象徴的な動きを見事に蘇らせていましたよね？" },
+                { speaker: 'A', text: "<span class=\"text-red-600 font-bold\">Absolutely!</span>", ja: "その通りです！" },
+                { speaker: 'A', text: "His performance as Michael was <span class=\"text-red-600 font-bold\">so</span> impressive <span class=\"text-red-600 font-bold\">that</span> it <span class=\"text-red-600 font-bold\">actually</span> <span class=\"text-red-600 font-bold\">inspired me to</span> start practicing.", ja: "マイケル役としての彼のパフォーマンスはとても印象的で、実際に私も練習を始めるきっかけになりました。" },
+                { speaker: 'A', text: "The intro to Billie Jean was so cool that I <span class=\"text-red-600 font-bold\">even</span> bought a <span class=\"text-red-600 font-bold\">fedora hat</span> to practice the pose <span class=\"text-red-600 font-bold\">myself</span>.", ja: "『ビリー・ジーン』のイントロがすごく格好良かったので、自分でもポーズを練習するためにフェドーラハットを買ってしまったくらいです。" },
+                { speaker: 'B', text: "That’s <span class=\"text-red-600 font-bold\">awesome!</span>", ja: "それは素晴らしいですね！" },
+                { speaker: 'B', text: "Having the <span class=\"text-red-600 font-bold\">right</span> hat <span class=\"text-red-600 font-bold\">definitely</span> makes practice more <span class=\"text-red-600 font-bold\">exciting</span>.", ja: "ぴったりの帽子があると練習がさらに楽しくなりますね。" },
+                { speaker: 'B', text: "Have you been <span class=\"text-red-600 font-bold\">working on</span> any <span class=\"text-red-600 font-bold\">specific</span> techniques?", ja: "何か具体的なテクニックに取り組んでいますか？" },
+                { speaker: 'A', text: "Yes, I’ve been <span class=\"text-red-600 font-bold\">practicing</span> body <span class=\"text-red-600 font-bold\">isolations</span> for about two months now.", ja: "はい、もう2ヶ月ほどボディ・アイソレーションの練習をしています。" },
+                { speaker: 'A', text: "It’s <span class=\"text-red-600 font-bold\">tough</span> to <span class=\"text-red-600 font-bold\">control</span> each part <span class=\"text-red-600 font-bold\">independently</span>, but I <span class=\"text-red-600 font-bold\">noticed</span> an <span class=\"text-red-600 font-bold\">unexpected benefit</span>:", ja: "各部位を独立してコントロールするのは難しいですが、予想外の効果に気づきました。" },
+                { speaker: 'A', text: "It makes my brain feel <span class=\"text-red-600 font-bold\">super sharp</span> and <span class=\"text-red-600 font-bold\">focused</span>.", ja: "脳がとても冴えて集中できるように感じるんです。" },
+                { speaker: 'B', text: "That <span class=\"text-red-600 font-bold\">makes total sense!</span>", ja: "完全に納得です！" },
+                { speaker: 'B', text: "Physical control <span class=\"text-red-600 font-bold\">requires</span> <span class=\"text-red-600 font-bold\">deep concentration</span>.", ja: "身体のコントロールには深い集中力が必要ですものね。" },
+                { speaker: 'B', text: "Does that <span class=\"text-red-600 font-bold\">mental clarity</span> feel <span class=\"text-red-600 font-bold\">familiar</span> to you?", ja: "その頭の冴えは、何か聞き覚えのある感覚ですか？" },
+                { speaker: 'A', text: "<span class=\"text-red-600 font-bold\">Exactly.</span>", ja: "その通りです。" },
+                { speaker: 'A', text: "As a <span class=\"text-red-600 font-bold\">trail runner</span>, I always <span class=\"text-red-600 font-bold\">get that clear-minded, motivated feeling</span> after a long run, and <span class=\"text-red-600 font-bold\">isolation training</span> gives me a <span class=\"text-red-600 font-bold\">very similar boost</span>.", ja: "トレイルランナーとして、長距離を走った後はいつも頭がすっきりしてモチベーションが高まる感覚があるのですが、アイソレーショントレーニングも非常に似た良い影響を与えてくれます。" },
+                { speaker: 'A', text: "With my <span class=\"text-red-600 font-bold\">athletic endurance</span> and <span class=\"text-red-600 font-bold\">consistent practice</span>, I’m <span class=\"text-red-600 font-bold\">confident</span> I’ll <span class=\"text-red-600 font-bold\">master</span> his <span class=\"text-red-600 font-bold\">signature moves</span> <span class=\"text-red-600 font-bold\">eventually!</span>", ja: "運動で培った持久力と継続的な練習があれば、いつか彼の代表的な動きをマスターできると確信しています！" },
+                { speaker: 'B', text: "With that <span class=\"text-red-600 font-bold\">level of dedication</span>, you’ll <span class=\"text-red-600 font-bold\">definitely</span> get there.", ja: "それほどの熱意があれば、絶対に達成できますよ。" },
+                { speaker: 'B', text: "<span class=\"text-red-600 font-bold\">Keep up the great work</span>, and have a <span class=\"text-red-600 font-bold\">wonderful day</span> at work!", ja: "その調子で頑張ってください。今日もお仕事頑張ってくださいね！" }
+            ]
+        };
+
+        var defaultScript = {
             id: 'togakushi_230km',
             title: '戸隠トレラン＆230km挑戦',
             speakerA: 'ランナー (Runner)',
             speakerB: 'コーチ (Coach)',
             lines: [
-                {
-                    speaker: 'A',
-                    text: "So, I participated in a trail running race around the Togakushi Ski Resort in Nagano last weekend, and I’d love to tell you about it.",
-                    ja: "先週末、長野県の戸隠スキー場周辺で行われたトレイルランニングの大会に出てきたんですけども、その時のお話をさせてください。"
-                },
-                {
-                    speaker: 'B',
-                    text: "I’d love to hear all about it! How did it go?",
-                    ja: "ぜひ聞かせてください。トレランの大会、素晴らしいですね。どうでしたか？"
-                },
-                {
-                    speaker: 'A',
-                    text: "Well, since it’s early September, it was still pretty hot, so I was worried about my stamina. On top of that, it rained until the day before, so the trail was super muddy.",
-                    ja: "まだ9月の始めという暑い時期なので、まずは体力が持つか心配でした。それに加えてレース前日まで雨が降っていて、コースがだいぶぐちゃぐちゃになることが予想されたので、それも心配でした。"
-                },
-                {
-                    speaker: 'B',
-                    text: "Oh, that sounds tough! Did you manage to finish okay?",
-                    ja: "それは大変そうですね！無事に完走できたんでしょうか？"
-                },
-                {
-                    speaker: 'A',
-                    text: "I actually did! And my time was surprisingly good. Honestly, I was a bit worried because I’d been doing Maffetone training since June—running at a very slow pace while keeping my heart rate under 130 bpm, along with limiting carbs. I was nervous about whether I could actually speed up or last through the race.",
-                    ja: "無事に完走できました！しかもタイムは驚くほど良かったです。実は6月からマフェトントレーニングをやらせてもらっていて、炭水化物を控えた上ですごいスローペース（心拍数130以下）で走るトレーニングを続けていたので、スピードが出せるのか、体力が持つか心配でした。"
-                },
-                {
-                    speaker: 'B',
-                    text: "That low-intensity training takes time to show results, so I totally get your anxiety. But your body clearly adapted!",
-                    ja: "低強度のトレーニングは効果が出るまでに時間がかかるので、その不安は本当によくわかります。でも体がしっかり順応したんですね！"
-                },
-                {
-                    speaker: 'A',
-                    text: "Right! I even lost about 4 kg, so I brought a lot of energy gels, but I ended up taking less than half of what I planned. I even had enough energy left to sprint right before the finish line.",
-                    ja: "そうですね！体重も4kgぐらい減ったので補給食（ジェル）をたくさん持っていったのですが、結局予定していた量の半分も食べずに済みました。ゴールラインを切る直前にはダッシュができるくらいの余力もありました。"
-                },
-                {
-                    speaker: 'B',
-                    text: "That means your body became incredibly efficient at burning fat for fuel. Your pacing was spot on!",
-                    ja: "それは体が脂肪をエネルギーとして効率よく燃焼できるようになった証拠ですね！ペース配分も完璧でした。"
-                },
-                {
-                    speaker: 'A',
-                    text: "Thanks. Next up, I have a 230 km ultra-race coming up in early October, so I want to keep this momentum going. But with that kind of distance, I’m wondering what my target heart rate should be.",
-                    ja: "ありがとうございます。次は10月上旬に230kmの超長距離レースがあるので、この勢いを維持したいと思っています。ただ、それほどの距離になると心拍数はどのくらいで走ればいいのかちょっと心配です。"
-                },
-                {
-                    speaker: 'B',
-                    text: "For 230 kilometers, staying in Zone 2—around 60 to 70 percent of your maximum heart rate, or roughly 120 to 130 bpm—is ideal. It keeps you in a conversational pace while saving energy.",
-                    ja: "230kmという距離なら、ゾーン2（最大心拍数のおよそ60〜70%、約120〜130bpm）を維持するのが理想的です。エネルギーを節約しつつ、会話ができるペースを保つことができます。"
-                },
-                {
-                    speaker: 'A',
-                    text: "Got it. I’ll aim for Zone 2 and give it my best shot. Thanks for the advice!",
-                    ja: "分かりました。ゾーン2を目指して全力を尽くしてみたいと思います。アドバイスありがとうございます！"
-                },
-                {
-                    speaker: 'B',
-                    text: "Best of luck with your training! You’re going to do great.",
-                    ja: "トレーニング頑張ってください！応援しています！"
-                }
+                { speaker: 'A', text: "So, I <span class=\"text-red-600 font-bold\">participated in</span> a trail running race around the Togakushi Ski Resort in Nagano last weekend, and I’d <span class=\"text-red-600 font-bold\">love to</span> tell you about it.", ja: "先週末、長野県の戸隠スキー場周辺で行われたトレイルランニングの大会に出てきたんですけども、その時のお話をさせてください。" },
+                { speaker: 'B', text: "I’d <span class=\"text-red-600 font-bold\">love to</span> hear <span class=\"text-red-600 font-bold\">all about it!</span> How did it go?", ja: "ぜひ聞かせてください。トレランの大会、素晴らしいですね。どうでしたか？" },
+                { speaker: 'A', text: "Well, since it’s early September, it was still <span class=\"text-red-600 font-bold\">pretty hot</span>, so I was <span class=\"text-red-600 font-bold\">worried about</span> my stamina. <span class=\"text-red-600 font-bold\">On top of that</span>, it rained <span class=\"text-red-600 font-bold\">until</span> the day before, so the trail was <span class=\"text-red-600 font-bold\">super muddy</span>.", ja: "まだ9月の始めという暑い時期なので、まずは体力が持つか心配でした。それに加えてレース前日まで雨が降っていて、コースがだいぶぐちゃぐちゃになることが予想されたので、それも心配でした。" },
+                { speaker: 'B', text: "Oh, that sounds tough! Did you <span class=\"text-red-600 font-bold\">manage to</span> finish <span class=\"text-red-600 font-bold\">okay?</span>", ja: "それは大変そうですね！無事に完走できたんでしょうか？" },
+                { speaker: 'A', text: "I <span class=\"text-red-600 font-bold\">actually</span> did! And my time was <span class=\"text-red-600 font-bold\">surprisingly good</span>. <span class=\"text-red-600 font-bold\">Honestly</span>, I was <span class=\"text-red-600 font-bold\">a bit</span> worried because I’d been <span class=\"text-red-600 font-bold\">doing</span> Maffetone training <span class=\"text-red-600 font-bold\">since</span> June—running at a very slow pace while <span class=\"text-red-600 font-bold\">keeping</span> my heart rate <span class=\"text-red-600 font-bold\">under</span> 130 bpm, <span class=\"text-red-600 font-bold\">along with</span> limiting carbs. I was nervous about whether I could <span class=\"text-red-600 font-bold\">actually</span> speed up or last through the race.", ja: "無事に完走できました！しかもタイムは驚くほど良かったです。実は6月からマフェトントレーニングをやらせてもらっていて、炭水化物を控えた上ですごいスローペース（心拍数130以下）で走るトレーニングを続けていたので、スピードが出せるのか、体力が持つか心配でした。" },
+                { speaker: 'B', text: "That <span class=\"text-red-600 font-bold\">low-intensity</span> training <span class=\"text-red-600 font-bold\">takes time to</span> show results, so I <span class=\"text-red-600 font-bold\">totally get</span> your anxiety. But your body <span class=\"text-red-600 font-bold\">clearly adapted!</span>", ja: "低強度のトレーニングは効果が出るまでに時間がかかるので、その不安は本当によくわかります。でも体がしっかり順応したんですね！" },
+                { speaker: 'A', text: "Right! I <span class=\"text-red-600 font-bold\">even</span> lost about 4 kg, so I brought <span class=\"text-red-600 font-bold\">a lot of</span> energy gels, but I <span class=\"text-red-600 font-bold\">ended up</span> taking <span class=\"text-red-600 font-bold\">less than</span> half of what I planned. I even had enough energy left to <span class=\"text-red-600 font-bold\">sprint</span> right before the <span class=\"text-red-600 font-bold\">finish line</span>.", ja: "そうですね！体重も4kgぐらい減ったので補給食（ジェル）をたくさん持っていったのですが、結局予定していた量の半分も食べずに済みました。ゴールラインを切る直前にはダッシュができるくらいの余力もありました。" },
+                { speaker: 'B', text: "That means your body became <span class=\"text-red-600 font-bold\">incredibly efficient</span> at <span class=\"text-red-600 font-bold\">burning fat</span> for fuel. Your pacing was <span class=\"text-red-600 font-bold\">spot on!</span>", ja: "それは体が脂肪をエネルギーとして効率よく燃焼できるようになった証拠ですね！ペース配分も完璧でした。" },
+                { speaker: 'A', text: "Thanks. <span class=\"text-red-600 font-bold\">Next up</span>, I have a 230 km ultra-race <span class=\"text-red-600 font-bold\">coming up</span> in early October, so I want to <span class=\"text-red-600 font-bold\">keep this momentum going</span>. But with that kind of distance, I’m wondering what my target heart rate should be.", ja: "ありがとうございます。次は10月上旬に230kmの超長距離レースがあるので、この勢いを維持したいと思っています。ただ、それほどの距離になると心拍数はどのくらいで走ればいいのかちょっと心配です。" },
+                { speaker: 'B', text: "For 230 kilometers, <span class=\"text-red-600 font-bold\">staying in</span> Zone 2—<span class=\"text-red-600 font-bold\">around</span> 60 to 70 percent of your maximum heart rate, or <span class=\"text-red-600 font-bold\">roughly</span> 120 to 130 bpm—is <span class=\"text-red-600 font-bold\">ideal</span>. It <span class=\"text-red-600 font-bold\">keeps you in</span> a <span class=\"text-red-600 font-bold\">conversational pace</span> while <span class=\"text-red-600 font-bold\">saving energy</span>.", ja: "230kmという距離なら、ゾーン2（最大心拍数のおよそ60〜70%、約120〜130bpm）を維持するのが理想的です。エネルギーを節約しつつ、会話ができるペースを保つことができます。" },
+                { speaker: 'A', text: "Got it. I’ll <span class=\"text-red-600 font-bold\">aim for</span> Zone 2 and <span class=\"text-red-600 font-bold\">give it my best shot</span>. Thanks for the advice!", ja: "分かりました。ゾーン2を目指して全力を尽くしてみたいと思います。アドバイスありがとうございます！" },
+                { speaker: 'B', text: "<span class=\"text-red-600 font-bold\">Best of luck with</span> your training! You’re going to <span class=\"text-red-600 font-bold\">do great</span>.", ja: "トレーニング頑張ってください！応援しています！" }
             ]
         };
 
-        // Application State
-        let scriptsList = [defaultScript];
-        let currentScriptId = defaultScript.id;
-        let activeScript = defaultScript;
+        // Application State Variables
+        var scriptsList = [michaelMovieScript, defaultScript];
+        var currentScriptId = michaelMovieScript.id;
+        var activeScript = michaelMovieScript;
         
-        let currentLineIndex = -1;
-        let isPlaying = false;
-        let currentSpeed = 1.0;
-        let currentPauseMultiplier = 1.0;
+        var currentLineIndex = -1;
+        var isPlaying = false;
+        
+        // Independent playback speeds
+        var currentJaSpeed = 1.0;
+        var currentEnSpeed = 1.0;
+        var currentPauseMultiplier = 1.0; // 1.0倍固定
 
-        let currentSequenceStep = 'IDLE'; // 'IDLE', 'JA', 'PAUSE', 'EN'
-        let pauseTimerId = null;
+        var currentSequenceStep = 'IDLE'; // 'IDLE', 'JA', 'PAUSE', 'EN'
+        var pauseTimerId = null;
+        var activePlaybackToken = 0; // Guard token to prevent double speech stuttering
 
-        let lineRepeatStates = [];
-        let linePlayCounts = [];
+        var lineRepeatStates = [];
+        var linePlayCounts = [];
 
-        let genderFilterA = 'female';
-        let genderFilterB = 'male';
+        var allEnglishVoices = [];
+        var allJapaneseVoices = [];
+        var selectedVoiceA_EN_URI = '';
+        var selectedVoiceA_JA_URI = '';
+        var selectedVoiceB_EN_URI = '';
+        var selectedVoiceB_JA_URI = '';
 
-        let allEnglishVoices = [];
-        let allJapaneseVoices = [];
-        let selectedVoiceA_EN_URI = '';
-        let selectedVoiceA_JA_URI = '';
-        let selectedVoiceB_EN_URI = '';
-        let selectedVoiceB_JA_URI = '';
+        var editingLineIndex = null;
 
+        // UI Toast Helper
         function showToast(message) {
-            const toast = document.getElementById('toast-msg');
-            const toastText = document.getElementById('toast-text');
+            var toast = document.getElementById('toast-msg');
+            var toastText = document.getElementById('toast-text');
             if (!toast || !toastText) return;
             toastText.textContent = message;
             toast.classList.remove('hidden');
-            setTimeout(() => {
+            setTimeout(function() {
                 toast.classList.add('hidden');
             }, 3000);
         }
 
-        function loadScriptsFromStorage() {
+        function saveAllToStorage() {
             try {
-                const stored = localStorage.getItem('trainer_scripts_data');
-                if (stored) {
-                    const parsed = JSON.parse(stored);
+                localStorage.setItem('trainer_scripts_data_v2', JSON.stringify(scriptsList));
+                localStorage.setItem('trainer_current_script_id', currentScriptId);
+                localStorage.setItem('trainer_ja_speed', currentJaSpeed.toString());
+                localStorage.setItem('trainer_en_speed', currentEnSpeed.toString());
+                
+                saveVoiceSettingsToStorage();
+                
+                var nowStr = new Date().toLocaleString('ja-JP');
+                localStorage.setItem('trainer_last_backup_time', nowStr);
+                var lastEl = document.getElementById('last-backup-time');
+                if (lastEl) lastEl.textContent = "最終自動バックアップ: " + nowStr;
+            } catch (e) {
+                console.error("Storage save failed:", e);
+            }
+        }
+
+        function loadAllFromStorage() {
+            try {
+                var storedScripts = localStorage.getItem('trainer_scripts_data_v2');
+                if (storedScripts) {
+                    var parsed = JSON.parse(storedScripts);
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         scriptsList = parsed;
                     }
                 }
-            } catch (e) {
-                console.error("Failed to load scripts from storage:", e);
-            }
-        }
 
-        function saveScriptsToStorage() {
-            try {
-                localStorage.setItem('trainer_scripts_data', JSON.stringify(scriptsList));
-            } catch (e) {
-                console.error("Failed to save scripts to storage:", e);
-            }
-        }
+                var savedScriptId = localStorage.getItem('trainer_current_script_id');
+                if (savedScriptId && scriptsList.some(function(s) { return s.id === savedScriptId; })) {
+                    currentScriptId = savedScriptId;
+                }
 
-        function loadVoiceSettingsFromStorage() {
-            try {
-                selectedVoiceA_EN_URI = localStorage.getItem('trainer_voice_A_EN') || '';
-                selectedVoiceA_JA_URI = localStorage.getItem('trainer_voice_A_JA') || '';
-                selectedVoiceB_EN_URI = localStorage.getItem('trainer_voice_B_EN') || '';
-                selectedVoiceB_JA_URI = localStorage.getItem('trainer_voice_B_JA') || '';
+                currentJaSpeed = parseFloat(localStorage.getItem('trainer_ja_speed') || '1.0');
+                currentEnSpeed = parseFloat(localStorage.getItem('trainer_en_speed') || '1.0');
+
+                loadVoiceSettingsFromStorage();
             } catch (e) {
-                console.error("Failed to load voice settings:", e);
+                console.error("Storage load failed:", e);
             }
         }
 
@@ -579,97 +677,69 @@
                 localStorage.setItem('trainer_voice_B_EN', selectedVoiceB_EN_URI);
                 localStorage.setItem('trainer_voice_B_JA', selectedVoiceB_JA_URI);
             } catch (e) {
-                console.error("Failed to save voice settings:", e);
+                console.error("Voice settings save failed:", e);
             }
         }
 
-        function populateScriptSelector() {
-            const selectEl = document.getElementById('script-select');
-            if (!selectEl) return;
-            selectEl.innerHTML = '';
-            scriptsList.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = s.title;
-                if (s.id === currentScriptId) opt.selected = true;
-                selectEl.appendChild(opt);
-            });
-            
-            const badgeEl = document.getElementById('current-script-badge');
-            if (badgeEl && activeScript) {
-                badgeEl.textContent = `スクリプト: ${activeScript.title}`;
+        function loadVoiceSettingsFromStorage() {
+            try {
+                selectedVoiceA_EN_URI = localStorage.getItem('trainer_voice_A_EN') || '';
+                selectedVoiceA_JA_URI = localStorage.getItem('trainer_voice_A_JA') || '';
+                selectedVoiceB_EN_URI = localStorage.getItem('trainer_voice_B_EN') || '';
+                selectedVoiceB_JA_URI = localStorage.getItem('trainer_voice_B_JA') || '';
+            } catch (e) {
+                console.error("Voice settings load failed:", e);
             }
+        }
+
+        function getVoiceByURI(uri) {
+            if (!uri || !('speechSynthesis' in window)) return null;
+            return window.speechSynthesis.getVoices().find(function(v) { return v.voiceURI === uri; }) || null;
         }
 
         function isHighQualityVoice(voice) {
             if (!voice || !voice.name) return false;
-            const name = voice.name.toLowerCase();
-            const hqKeywords = ['natural', 'enhanced', 'premium', 'google', 'neural', 'online', 'wavenet', 'high quality', 'studio', 'deep'];
-            return hqKeywords.some(kw => name.includes(kw));
+            var name = voice.name.toLowerCase();
+            var hqKeywords = ['natural', 'enhanced', 'premium', 'google', 'neural', 'online', 'wavenet', 'high quality', 'studio', 'deep', 'multilingual', 'expressive'];
+            return hqKeywords.some(function(kw) { return name.includes(kw); });
         }
 
         function detectVoiceGender(voice) {
-            if (!voice || !voice.name) return 'unknown';
-            const name = voice.name.toLowerCase();
-            const femaleKeywords = ['samantha', 'zira', 'victoria', 'aria', 'jenny', 'michelle', 'eva', 'fiona', 'joanna', 'female', 'susan', 'karen', 'catherine', 'hazel', 'linda', 'amy', 'emma', 'stephanie'];
-            const maleKeywords = ['david', 'mark', 'george', 'alex', 'guy', 'christopher', 'eric', 'steffen', 'male', 'fred', 'daniel', 'richard', 'james', 'thomas', 'brian'];
+            if (!voice || !voice.name) return '不明';
+            var name = voice.name.toLowerCase();
+            var femaleKeywords = ['samantha', 'zira', 'victoria', 'aria', 'jenny', 'michelle', 'eva', 'fiona', 'joanna', 'female', 'woman', 'susan', 'karen', 'catherine', 'hazel', 'linda', 'amy', 'emma', 'stephanie', 'kyoko', 'otoya', 'nanami', 'aoi', 'mayu', 'sakura', 'haruka', 'sayaka', 'yuri', 'misaki', 'natasha', 'sara', 'lisa', 'moira', 'veena', 'tessa', 'vicki', 'alice', 'allison', 'ava', 'serena', 'claire'];
+            var maleKeywords = ['david font', 'david', 'mark', 'george', 'alex', 'guy', 'christopher', 'eric', 'steffen', 'male', 'man', 'fred', 'daniel', 'richard', 'james', 'thomas', 'brian', 'keita', 'takumi', 'ichiro', 'daichi', 'naoki', 'kenji', 'taro', 'ralph', 'tom', 'oliver', 'lee', 'rishi', 'diego', 'jorge', 'nicolas'];
             
-            if (femaleKeywords.some(kw => name.includes(kw))) return 'female';
-            if (maleKeywords.some(kw => name.includes(kw))) return 'male';
-            return 'unknown';
+            if (femaleKeywords.some(function(kw) { return name.includes(kw); })) return '女性';
+            if (maleKeywords.some(function(kw) { return name.includes(kw); })) return '男性';
+            return '不明';
         }
 
         function initVoiceEngines() {
             if (!('speechSynthesis' in window)) return;
+            var voices = window.speechSynthesis.getVoices();
+            if (voices.length === 0) return;
 
-            const voices = window.speechSynthesis.getVoices();
-            const hqOnly = document.getElementById('toggle-hq-only')?.checked ?? true;
+            var enVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('en'); });
+            var jaVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('ja') || v.lang.toLowerCase().includes('jp'); });
 
-            // Filter US English
-            let enUSVoices = voices.filter(v => {
-                const lang = v.lang.toLowerCase().replace('_', '-');
-                return lang === 'en-us' || lang.startsWith('en-us');
-            });
-            
-            if (enUSVoices.length === 0) {
-                enUSVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
-            }
+            var hqEn = enVoices.filter(isHighQualityVoice);
+            if (hqEn.length > 0) enVoices = hqEn;
 
-            // Filter Japanese
-            let jaVoices = voices.filter(v => 
-                v.lang.toLowerCase().startsWith('ja') || 
-                v.lang.toLowerCase().includes('jp')
-            );
+            var hqJa = jaVoices.filter(isHighQualityVoice);
+            if (hqJa.length > 0) jaVoices = hqJa;
 
-            if (hqOnly) {
-                const hqEn = enUSVoices.filter(v => isHighQualityVoice(v));
-                if (hqEn.length > 0) enUSVoices = hqEn;
-
-                const hqJa = jaVoices.filter(v => isHighQualityVoice(v));
-                if (hqJa.length > 0) jaVoices = hqJa;
-            }
-
-            const sortVoices = (list) => {
-                return list.sort((a, b) => {
-                    const aHq = isHighQualityVoice(a);
-                    const bHq = isHighQualityVoice(b);
-                    if (aHq && !bHq) return -1;
-                    if (!aHq && bHq) return 1;
-                    return a.name.localeCompare(b.name);
-                });
-            };
-
-            allEnglishVoices = sortVoices(enUSVoices);
-            allJapaneseVoices = sortVoices(jaVoices);
+            allEnglishVoices = enVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
+            allJapaneseVoices = jaVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
 
             populateVoiceSelects();
         }
 
         function populateVoiceSelects() {
-            const selectA_EN = document.getElementById('voice-select-a-en');
-            const selectA_JA = document.getElementById('voice-select-a-ja');
-            const selectB_EN = document.getElementById('voice-select-b-en');
-            const selectB_JA = document.getElementById('voice-select-b-ja');
+            var selectA_EN = document.getElementById('voice-select-a-en');
+            var selectA_JA = document.getElementById('voice-select-a-ja');
+            var selectB_EN = document.getElementById('voice-select-b-en');
+            var selectB_JA = document.getElementById('voice-select-b-ja');
 
             if (!selectA_EN || !selectA_JA || !selectB_EN || !selectB_JA) return;
 
@@ -678,102 +748,116 @@
             selectB_EN.innerHTML = '';
             selectB_JA.innerHTML = '';
 
-            // Japanese Voices
-            if (allJapaneseVoices.length === 0) {
-                const optA = document.createElement('option');
-                optA.value = '';
-                optA.textContent = '日本語音声 (OS標準)';
-                selectA_JA.appendChild(optA);
+            var appendOptions = function(selectEl, list) {
+                var addedCount = 0;
+                list.forEach(function(v) {
+                    var genderTag = detectVoiceGender(v);
+                    // 「性別不明」の音声は選択メニューから除外
+                    if (genderTag === '不明') return;
 
-                const optB = document.createElement('option');
-                optB.value = '';
-                optB.textContent = '日本語音声 (OS標準)';
-                selectB_JA.appendChild(optB);
-            } else {
-                allJapaneseVoices.forEach(v => {
-                    const badge = isHighQualityVoice(v) ? '✨ [高音質] ' : '';
-                    const optA = document.createElement('option');
-                    optA.value = v.voiceURI;
-                    optA.textContent = `${badge}${v.name} (${v.lang})`;
-                    selectA_JA.appendChild(optA);
-
-                    const optB = document.createElement('option');
-                    optB.value = v.voiceURI;
-                    optB.textContent = `${badge}${v.name} (${v.lang})`;
-                    selectB_JA.appendChild(optB);
+                    var opt = document.createElement('option');
+                    opt.value = v.voiceURI;
+                    opt.textContent = '✨ [' + genderTag + '] ' + v.name + ' (' + v.lang + ')';
+                    selectEl.appendChild(opt);
+                    addedCount++;
                 });
-            }
 
-            // English US Voices Filtered by Gender
-            const filterEngVoices = (gender) => {
-                if (gender === 'all') return allEnglishVoices;
-                const filtered = allEnglishVoices.filter(v => {
-                    const g = detectVoiceGender(v);
-                    return g === gender || g === 'unknown';
-                });
-                return filtered.length > 0 ? filtered : allEnglishVoices;
+                if (addedCount === 0) {
+                    var opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'OS標準高音質音声';
+                    selectEl.appendChild(opt);
+                }
             };
 
-            const voicesA = filterEngVoices(genderFilterA);
-            voicesA.forEach(v => {
-                const badge = isHighQualityVoice(v) ? '✨ [高音質] ' : '';
-                const opt = document.createElement('option');
-                opt.value = v.voiceURI;
-                opt.textContent = `${badge}${v.name}`;
-                selectA_EN.appendChild(opt);
-            });
+            appendOptions(selectA_JA, allJapaneseVoices);
+            appendOptions(selectA_EN, allEnglishVoices);
+            appendOptions(selectB_JA, allJapaneseVoices);
+            appendOptions(selectB_EN, allEnglishVoices);
 
-            const voicesB = filterEngVoices(genderFilterB);
-            voicesB.forEach(v => {
-                const badge = isHighQualityVoice(v) ? '✨ [高音質] ' : '';
-                const opt = document.createElement('option');
-                opt.value = v.voiceURI;
-                opt.textContent = `${badge}${v.name}`;
-                selectB_EN.appendChild(opt);
-            });
+            if (selectedVoiceA_JA_URI && getVoiceByURI(selectedVoiceA_JA_URI)) selectA_JA.value = selectedVoiceA_JA_URI;
+            else if (selectA_JA.options.length > 0) { selectedVoiceA_JA_URI = selectA_JA.options[0].value; selectA_JA.value = selectedVoiceA_JA_URI; }
 
-            // Set Values
-            if (selectedVoiceA_EN_URI && getVoiceByURI(selectedVoiceA_EN_URI)) {
-                selectA_EN.value = selectedVoiceA_EN_URI;
-            } else if (voicesA.length > 0) {
-                selectedVoiceA_EN_URI = voicesA[0].voiceURI;
-                selectA_EN.value = selectedVoiceA_EN_URI;
-            }
+            if (selectedVoiceA_EN_URI && getVoiceByURI(selectedVoiceA_EN_URI)) selectA_EN.value = selectedVoiceA_EN_URI;
+            else if (selectA_EN.options.length > 0) { selectedVoiceA_EN_URI = selectA_EN.options[0].value; selectA_EN.value = selectedVoiceA_EN_URI; }
 
-            if (selectedVoiceB_EN_URI && getVoiceByURI(selectedVoiceB_EN_URI)) {
-                selectB_EN.value = selectedVoiceB_EN_URI;
-            } else if (voicesB.length > 0) {
-                selectedVoiceB_EN_URI = voicesB[0].voiceURI;
-                selectB_EN.value = selectedVoiceB_EN_URI;
-            }
+            if (selectedVoiceB_JA_URI && getVoiceByURI(selectedVoiceB_JA_URI)) selectB_JA.value = selectedVoiceB_JA_URI;
+            else if (selectB_JA.options.length > 1) { selectedVoiceB_JA_URI = selectB_JA.options[1].value; selectB_JA.value = selectedVoiceB_JA_URI; }
+            else if (selectB_JA.options.length > 0) { selectedVoiceB_JA_URI = selectB_JA.options[0].value; selectB_JA.value = selectedVoiceB_JA_URI; }
 
-            if (selectedVoiceA_JA_URI && getVoiceByURI(selectedVoiceA_JA_URI)) {
-                selectA_JA.value = selectedVoiceA_JA_URI;
-            } else if (allJapaneseVoices.length > 0) {
-                selectedVoiceA_JA_URI = allJapaneseVoices[0].voiceURI;
-                selectA_JA.value = selectedVoiceA_JA_URI;
-            }
-
-            if (selectedVoiceB_JA_URI && getVoiceByURI(selectedVoiceB_JA_URI)) {
-                selectB_JA.value = selectedVoiceB_JA_URI;
-            } else if (allJapaneseVoices.length > 1) {
-                selectedVoiceB_JA_URI = allJapaneseVoices[1].voiceURI;
-                selectB_JA.value = selectedVoiceB_JA_URI;
-            } else if (allJapaneseVoices.length > 0) {
-                selectedVoiceB_JA_URI = allJapaneseVoices[0].voiceURI;
-                selectB_JA.value = selectedVoiceB_JA_URI;
-            }
+            if (selectedVoiceB_EN_URI && getVoiceByURI(selectedVoiceB_EN_URI)) selectB_EN.value = selectedVoiceB_EN_URI;
+            else if (selectB_EN.options.length > 1) { selectedVoiceB_EN_URI = selectB_EN.options[1].value; selectB_EN.value = selectedVoiceB_EN_URI; }
+            else if (selectB_EN.options.length > 0) { selectedVoiceB_EN_URI = selectB_EN.options[0].value; selectB_EN.value = selectedVoiceB_EN_URI; }
         }
 
-        function onGenderChanged(speaker, gender) {
-            if (speaker === 'A') genderFilterA = gender;
-            if (speaker === 'B') genderFilterB = gender;
+        function initVoiceEngines() {
+            if (!('speechSynthesis' in window)) return;
+            var voices = window.speechSynthesis.getVoices();
+            if (voices.length === 0) return;
+
+            var enVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('en'); });
+            var jaVoices = voices.filter(function(v) { return v.lang.toLowerCase().includes('ja') || v.lang.toLowerCase().includes('jp'); });
+
+            var hqEn = enVoices.filter(isHighQualityVoice);
+            if (hqEn.length > 0) enVoices = hqEn;
+
+            var hqJa = jaVoices.filter(isHighQualityVoice);
+            if (hqJa.length > 0) jaVoices = hqJa;
+
+            allEnglishVoices = enVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
+            allJapaneseVoices = jaVoices.sort(function(a,b) { return a.name.localeCompare(b.name); });
+
             populateVoiceSelects();
         }
 
-        function getVoiceByURI(uri) {
-            if (!uri) return null;
-            return window.speechSynthesis.getVoices().find(v => v.voiceURI === uri) || null;
+        function populateVoiceSelects() {
+            var selectA_EN = document.getElementById('voice-select-a-en');
+            var selectA_JA = document.getElementById('voice-select-a-ja');
+            var selectB_EN = document.getElementById('voice-select-b-en');
+            var selectB_JA = document.getElementById('voice-select-b-ja');
+
+            if (!selectA_EN || !selectA_JA || !selectB_EN || !selectB_JA) return;
+
+            selectA_EN.innerHTML = '';
+            selectA_JA.innerHTML = '';
+            selectB_EN.innerHTML = '';
+            selectB_JA.innerHTML = '';
+
+            var appendOptions = function(selectEl, list) {
+                if (list.length === 0) {
+                    var opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'OS標準高音質音声';
+                    selectEl.appendChild(opt);
+                    return;
+                }
+                list.forEach(function(v) {
+                    var genderTag = detectVoiceGender(v);
+                    var opt = document.createElement('option');
+                    opt.value = v.voiceURI;
+                    opt.textContent = '✨ [' + genderTag + '] ' + v.name + ' (' + v.lang + ')';
+                    selectEl.appendChild(opt);
+                });
+            };
+
+            appendOptions(selectA_JA, allJapaneseVoices);
+            appendOptions(selectA_EN, allEnglishVoices);
+            appendOptions(selectB_JA, allJapaneseVoices);
+            appendOptions(selectB_EN, allEnglishVoices);
+
+            if (selectedVoiceA_JA_URI && getVoiceByURI(selectedVoiceA_JA_URI)) selectA_JA.value = selectedVoiceA_JA_URI;
+            else if (allJapaneseVoices.length > 0) { selectedVoiceA_JA_URI = allJapaneseVoices[0].voiceURI; selectA_JA.value = selectedVoiceA_JA_URI; }
+
+            if (selectedVoiceA_EN_URI && getVoiceByURI(selectedVoiceA_EN_URI)) selectA_EN.value = selectedVoiceA_EN_URI;
+            else if (allEnglishVoices.length > 0) { selectedVoiceA_EN_URI = allEnglishVoices[0].voiceURI; selectA_EN.value = selectedVoiceA_EN_URI; }
+
+            if (selectedVoiceB_JA_URI && getVoiceByURI(selectedVoiceB_JA_URI)) selectB_JA.value = selectedVoiceB_JA_URI;
+            else if (allJapaneseVoices.length > 1) { selectedVoiceB_JA_URI = allJapaneseVoices[1].voiceURI; selectB_JA.value = selectedVoiceB_JA_URI; }
+            else if (allJapaneseVoices.length > 0) { selectedVoiceB_JA_URI = allJapaneseVoices[0].voiceURI; selectB_JA.value = selectedVoiceB_JA_URI; }
+
+            if (selectedVoiceB_EN_URI && getVoiceByURI(selectedVoiceB_EN_URI)) selectB_EN.value = selectedVoiceB_EN_URI;
+            else if (allEnglishVoices.length > 1) { selectedVoiceB_EN_URI = allEnglishVoices[1].voiceURI; selectB_EN.value = selectedVoiceB_EN_URI; }
+            else if (allEnglishVoices.length > 0) { selectedVoiceB_EN_URI = allEnglishVoices[0].voiceURI; selectB_EN.value = selectedVoiceB_EN_URI; }
         }
 
         function onVoiceSelected(speaker, lang, val) {
@@ -781,60 +865,71 @@
             if (speaker === 'A' && lang === 'ja') selectedVoiceA_JA_URI = val;
             if (speaker === 'B' && lang === 'en') selectedVoiceB_EN_URI = val;
             if (speaker === 'B' && lang === 'ja') selectedVoiceB_JA_URI = val;
-
-            saveVoiceSettingsToStorage();
+            saveAllToStorage();
         }
 
         function testVoice(speaker, lang) {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
 
-            let targetURI = '';
+            var targetURI = '';
             if (speaker === 'A' && lang === 'en') targetURI = selectedVoiceA_EN_URI;
             if (speaker === 'A' && lang === 'ja') targetURI = selectedVoiceA_JA_URI;
             if (speaker === 'B' && lang === 'en') targetURI = selectedVoiceB_EN_URI;
             if (speaker === 'B' && lang === 'ja') targetURI = selectedVoiceB_JA_URI;
 
-            let matchedVoice = getVoiceByURI(targetURI);
+            var matchedVoice = getVoiceByURI(targetURI);
+            var testText = lang === 'en' 
+                ? (speaker === 'A' ? "Hello! This is Speaker A's English voice." : "Hi there! This is Speaker B's English voice.")
+                : (speaker === 'A' ? "こんにちは。話者Aの日本語音声のテストです。" : "はじめまして。話者Bの日本語音声のテストです。");
 
-            let testText = "";
-            if (lang === 'en') {
-                testText = speaker === 'A' ? "Hello! I am Speaker A in English." : "Hi there! I am Speaker B in English.";
-            } else {
-                testText = speaker === 'A' ? "こんにちは。話者Aの日本語音声です。" : "はじめまして。話者Bの日本語音声です。";
-            }
-
-            const utterance = new SpeechSynthesisUtterance(testText);
-            utterance.rate = currentSpeed;
+            var utterance = new SpeechSynthesisUtterance(testText);
+            utterance.rate = lang === 'en' ? currentEnSpeed : currentJaSpeed;
             if (matchedVoice) {
                 utterance.voice = matchedVoice;
-                utterance.lang = matchedVoice.lang;
             } else {
-                utterance.lang = (lang === 'en') ? 'en-US' : 'ja-JP';
+                utterance.lang = lang === 'en' ? 'en-US' : 'ja-JP';
             }
-
             window.speechSynthesis.speak(utterance);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            loadScriptsFromStorage();
-            loadVoiceSettingsFromStorage();
+        window.addEventListener('DOMContentLoaded', function() {
+            loadAllFromStorage();
             
-            activeScript = scriptsList.find(s => s.id === currentScriptId) || scriptsList[0] || defaultScript;
+            activeScript = scriptsList.find(function(s) { return s.id === currentScriptId; }) || scriptsList[0] || michaelMovieScript;
             currentScriptId = activeScript.id;
 
             populateScriptSelector();
             resetLineStates();
             renderScriptContent();
+            updateSpeedButtonsUI();
+
             initVoiceEngines();
-            
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.onvoiceschanged = initVoiceEngines;
             }
         });
 
+        function populateScriptSelector() {
+            var selectEl = document.getElementById('script-select');
+            if (!selectEl) return;
+            selectEl.innerHTML = '';
+            scriptsList.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.title;
+                if (s.id === currentScriptId) opt.selected = true;
+                selectEl.appendChild(opt);
+            });
+            
+            var badgeEl = document.getElementById('current-script-badge');
+            if (badgeEl && activeScript) {
+                badgeEl.textContent = "スクリプト: " + activeScript.title;
+            }
+        }
+
         function resetLineStates() {
-            const count = activeScript ? activeScript.lines.length : 0;
+            var count = activeScript ? activeScript.lines.length : 0;
             lineRepeatStates = new Array(count).fill(false);
             linePlayCounts = new Array(count).fill(0);
         }
@@ -842,92 +937,96 @@
         function switchScript(scriptId) {
             stopPlayback();
             currentScriptId = scriptId;
-            activeScript = scriptsList.find(s => s.id === scriptId) || defaultScript;
+            activeScript = scriptsList.find(function(s) { return s.id === scriptId; }) || michaelMovieScript;
             currentLineIndex = -1;
             resetLineStates();
             populateScriptSelector();
             renderScriptContent();
             updateProgressUI();
+            saveAllToStorage();
         }
 
         function renderScriptContent() {
-            const container = document.getElementById('script-container');
+            var container = document.getElementById('script-container');
             if (!container) return;
             container.innerHTML = '';
 
-            activeScript.lines.forEach((line, index) => {
-                const isSpeakerA = line.speaker === 'A';
-                const speakerName = isSpeakerA ? (activeScript.speakerA || 'Speaker A') : (activeScript.speakerB || 'Speaker B');
-                const badgeClass = isSpeakerA ? 'speaker-a-badge' : 'speaker-b-badge';
-                const isRepeated = !!lineRepeatStates[index];
-                const playCount = linePlayCounts[index] || 0;
+            activeScript.lines.forEach(function(line, index) {
+                var isSpeakerA = line.speaker === 'A';
+                var speakerName = isSpeakerA ? (activeScript.speakerA || 'Person A') : (activeScript.speakerB || 'Person B');
+                var badgeClass = isSpeakerA ? 'speaker-a-badge' : 'speaker-b-badge';
+                var isRepeated = !!lineRepeatStates[index];
+                var playCount = linePlayCounts[index] || 0;
 
-                const card = document.createElement('div');
-                card.id = `line-card-${index}`;
-                card.onclick = () => playLineIndex(index);
-                card.className = `bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer hover:border-indigo-300 space-y-3 relative overflow-hidden`;
+                var card = document.createElement('div');
+                card.id = "line-card-" + index;
+                card.onclick = function() { playLineIndex(index); };
+                card.className = "bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer hover:border-indigo-300 space-y-3 relative overflow-hidden";
 
-                card.innerHTML = `
-                    <div class="flex flex-wrap justify-between items-center text-xs gap-2 border-b border-slate-100 pb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] ${badgeClass}">
-                                <i class="fa-solid fa-user text-[10px] mr-1"></i> ${speakerName}
-                            </span>
-                            <span id="step-indicator-${index}" class="hidden text-[11px] font-extrabold px-2 py-0.5 rounded-md">
-                            </span>
-                        </div>
+                card.innerHTML = 
+                    '<div class="flex flex-wrap justify-between items-center text-xs gap-2 border-b border-slate-100 pb-2">' +
+                        '<div class="flex items-center gap-2">' +
+                            '<span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] ' + badgeClass + '">' +
+                                '<i class="fa-solid fa-user text-[10px] mr-1"></i> ' + speakerName +
+                            '</span>' +
+                            '<span id="step-indicator-' + index + '" class="hidden text-[11px] font-extrabold px-2 py-0.5 rounded-md"></span>' +
+                        '</div>' +
 
-                        <div class="flex items-center gap-2">
-                            <span id="count-badge-${index}" class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200" title="再生回数">
-                                再生: ${playCount}回
-                            </span>
-                            <span class="text-slate-400 font-mono text-[11px]">#${index + 1}</span>
-                            <button onclick="event.stopPropagation(); playLineIndex(${index});" class="w-7 h-7 rounded-full bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 flex items-center justify-center transition" title="この行から再生">
-                                <i class="fa-solid fa-volume-high text-xs"></i>
-                            </button>
-                            <label onclick="event.stopPropagation();" class="flex items-center gap-1 text-[11px] font-bold text-slate-600 cursor-pointer bg-slate-50 hover:bg-indigo-50 px-2 py-1 rounded-lg border border-slate-200 select-none">
-                                <input type="checkbox" id="repeat-check-${index}" onchange="toggleLineRepeat(${index}, this.checked)" ${isRepeated ? 'checked' : ''} class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
-                                <span>リピート</span>
-                            </label>
-                        </div>
-                    </div>
+                        '<div class="flex items-center gap-2">' +
+                            '<span id="count-badge-' + index + '" class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200" title="再生回数">' +
+                                '再生: ' + playCount + '回' +
+                            '</span>' +
+                            '<span class="text-slate-400 font-mono text-[11px]">#' + (index + 1) + '</span>' +
+                            '<button onclick="event.stopPropagation(); playLineIndex(' + index + ');" class="w-7 h-7 rounded-full bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 flex items-center justify-center transition" title="この行から再生">' +
+                                '<i class="fa-solid fa-volume-high text-xs"></i>' +
+                            '</button>' +
+                            '<label onclick="event.stopPropagation();" class="flex items-center gap-1 text-[11px] font-bold text-slate-600 cursor-pointer bg-slate-50 hover:bg-indigo-50 px-2 py-1 rounded-lg border border-slate-200 select-none">' +
+                                '<input type="checkbox" id="repeat-check-' + index + '" onchange="toggleLineRepeat(' + index + ', this.checked)" ' + (isRepeated ? 'checked' : '') + ' class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">' +
+                                '<span>リピート</span>' +
+                            '</label>' +
+                        '</div>' +
+                    '</div>' +
 
-                    <!-- Japanese Text (Step 1) -->
-                    <div id="ja-box-${index}" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 transition">
-                        <span class="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded mr-1">1. 日本語</span>
-                        <span class="text-sm sm:text-base font-bold text-slate-700 leading-snug">${line.ja || '(日本語訳なし)'}</span>
-                    </div>
+                    '<div id="ja-box-' + index + '" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 transition space-y-1">' +
+                        '<div class="flex justify-between items-center">' +
+                            '<span class="text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded">1. 日本語</span>' +
+                            '<button onclick="event.stopPropagation(); openLineEditModal(' + index + ');" class="text-[11px] text-slate-500 hover:text-rose-600 font-bold flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-slate-200 shadow-sm" title="日本語訳を手動修正">' +
+                                '<i class="fa-solid fa-pen text-[10px]"></i> <span>和訳修正</span>' +
+                            '</button>' +
+                        '</div>' +
+                        '<div id="ja-text-' + index + '" class="text-sm sm:text-base font-bold text-slate-700 leading-snug">' +
+                            (line.ja || '(日本語訳なし)') +
+                        '</div>' +
+                    '</div>' +
 
-                    <!-- Pause Visual Countdown (Step 2) -->
-                    <div id="pause-box-${index}" class="hidden p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold space-y-1.5 pulse-pause">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-microphone text-amber-600 animate-pulse"></i>
-                                <span>2. 英語を発声してください（無音ポーズ中）</span>
-                            </div>
-                            <span id="pause-timer-${index}" class="font-mono text-sm bg-amber-200 px-2 py-0.5 rounded text-amber-900 font-bold">0.0s</span>
-                        </div>
-                        <div class="w-full bg-amber-200/80 h-2 rounded-full overflow-hidden">
-                            <div id="pause-bar-fill-${index}" class="bg-amber-500 h-full transition-all duration-75 ease-linear" style="width: 100%"></div>
-                        </div>
-                    </div>
+                    '<div id="pause-box-' + index + '" class="hidden p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100/90 border border-amber-300 text-amber-900 text-xs font-bold space-y-1.5 pulse-pause cursor-pointer transition shadow-sm" onclick="event.stopPropagation(); skipCurrentPause();" title="クリックで無音ポーズをスキップして英語を発声します">' +
+                        '<div class="flex items-center justify-between">' +
+                            '<div class="flex items-center gap-2 flex-wrap">' +
+                                '<i class="fa-solid fa-microphone text-amber-600 animate-pulse"></i>' +
+                                '<span>2. 英語を発声してください（無音ポーズ中）</span>' +
+                                '<span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md font-extrabold flex items-center gap-1 shadow-xs border border-amber-300"><i class="fa-solid fa-forward text-[9px]"></i> クリックでスキップ</span>' +
+                            '</div>' +
+                            '<span id="pause-timer-' + index + '" class="font-mono text-sm bg-amber-200 px-2 py-0.5 rounded text-amber-900 font-bold">0.0s</span>' +
+                        '</div>' +
+                        '<div class="w-full bg-amber-200/80 h-2 rounded-full overflow-hidden">' +
+                            '<div id="pause-bar-fill-' + index + '" class="bg-amber-500 h-full transition-all duration-75 ease-linear" style="width: 100%"></div>' +
+                        '</div>' +
+                    '</div>' +
 
-                    <!-- English Text (Step 3) -->
-                    <div id="en-box-${index}" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 transition">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">3. 英語</span>
-                            <button onclick="event.stopPropagation(); toggleShowEnglish(${index});" class="text-[11px] text-slate-500 hover:text-indigo-600 font-bold flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-slate-200 shadow-sm" title="英語テキストを表示/非表示">
-                                <i id="eye-icon-${index}" class="fa-solid fa-eye-slash text-xs"></i> <span id="eye-text-${index}">表示</span>
-                            </button>
-                        </div>
-                        <div id="en-text-${index}" class="hidden text-base sm:text-lg font-extrabold text-slate-800 leading-relaxed tracking-wide">
-                            ${line.text}
-                        </div>
-                        <div id="en-placeholder-${index}" class="text-xs text-slate-400 font-medium italic py-1 flex items-center gap-1.5 select-none">
-                            <i class="fa-solid fa-lock text-slate-300"></i> <span>英語音声の再生時に表示されます</span>
-                        </div>
-                    </div>
-                `;
+                    '<div id="en-box-' + index + '" class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 transition">' +
+                        '<div class="flex justify-between items-center mb-1">' +
+                            '<span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">3. 英語</span>' +
+                            '<button onclick="event.stopPropagation(); toggleShowEnglish(' + index + ');" class="text-[11px] text-slate-500 hover:text-indigo-600 font-bold flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-slate-200 shadow-sm">' +
+                                '<i id="eye-icon-' + index + '" class="fa-solid fa-eye-slash text-xs"></i> <span id="eye-text-' + index + '">表示</span>' +
+                            '</button>' +
+                        '</div>' +
+                        '<div id="en-text-' + index + '" class="hidden text-base sm:text-lg font-extrabold text-slate-800 leading-relaxed tracking-wide">' +
+                            line.text +
+                        '</div>' +
+                        '<div id="en-placeholder-' + index + '" class="text-xs text-slate-400 font-medium italic py-1 flex items-center gap-1.5 select-none">' +
+                            '<i class="fa-solid fa-lock text-slate-300"></i> <span>英語音声の再生時に表示されます</span>' +
+                        '</div>' +
+                    '</div>';
 
                 container.appendChild(card);
             });
@@ -936,10 +1035,10 @@
         }
 
         function toggleShowEnglish(index) {
-            const textEl = document.getElementById(`en-text-${index}`);
-            const placeholderEl = document.getElementById(`en-placeholder-${index}`);
-            const eyeIcon = document.getElementById(`eye-icon-${index}`);
-            const eyeText = document.getElementById(`eye-text-${index}`);
+            var textEl = document.getElementById("en-text-" + index);
+            var placeholderEl = document.getElementById("en-placeholder-" + index);
+            var eyeIcon = document.getElementById("eye-icon-" + index);
+            var eyeText = document.getElementById("eye-text-" + index);
             if (!textEl) return;
 
             if (textEl.classList.contains('hidden')) {
@@ -956,10 +1055,10 @@
         }
 
         function revealEnglish(index) {
-            const textEl = document.getElementById(`en-text-${index}`);
-            const placeholderEl = document.getElementById(`en-placeholder-${index}`);
-            const eyeIcon = document.getElementById(`eye-icon-${index}`);
-            const eyeText = document.getElementById(`eye-text-${index}`);
+            var textEl = document.getElementById("en-text-" + index);
+            var placeholderEl = document.getElementById("en-placeholder-" + index);
+            var eyeIcon = document.getElementById("eye-icon-" + index);
+            var eyeText = document.getElementById("eye-text-" + index);
             if (!textEl) return;
 
             textEl.classList.remove('hidden');
@@ -970,11 +1069,11 @@
 
         function hideAllEnglish() {
             if (!activeScript) return;
-            activeScript.lines.forEach((_, idx) => {
-                const textEl = document.getElementById(`en-text-${idx}`);
-                const placeholderEl = document.getElementById(`en-placeholder-${idx}`);
-                const eyeIcon = document.getElementById(`eye-icon-${idx}`);
-                const eyeText = document.getElementById(`eye-text-${idx}`);
+            activeScript.lines.forEach(function(_, idx) {
+                var textEl = document.getElementById("en-text-" + idx);
+                var placeholderEl = document.getElementById("en-placeholder-" + idx);
+                var eyeIcon = document.getElementById("eye-icon-" + idx);
+                var eyeText = document.getElementById("eye-text-" + idx);
                 if (textEl) {
                     textEl.classList.add('hidden');
                     if (placeholderEl) placeholderEl.classList.remove('hidden');
@@ -984,33 +1083,44 @@
             });
         }
 
-        function toggleLineRepeat(index, isChecked) {
-            lineRepeatStates[index] = isChecked;
+        function showAllEnglish() {
+            if (!activeScript) return;
+            activeScript.lines.forEach(function(_, idx) { revealEnglish(idx); });
         }
 
-        function updateCountDisplay(index) {
-            const countEl = document.getElementById(`count-badge-${index}`);
-            if (countEl) {
-                countEl.textContent = `再生: ${linePlayCounts[index]}回`;
-            }
+        function setJaSpeed(speed) {
+            currentJaSpeed = parseFloat(speed);
+            saveAllToStorage();
+            updateSpeedButtonsUI();
         }
 
-        function setSpeed(speed) {
-            currentSpeed = parseFloat(speed);
-            document.getElementById('speed-display').textContent = `${currentSpeed.toFixed(2)}x`;
+        function setEnSpeed(speed) {
+            currentEnSpeed = parseFloat(speed);
+            saveAllToStorage();
+            updateSpeedButtonsUI();
+        }
 
-            document.querySelectorAll('.speed-btn').forEach(btn => {
-                const bSpeed = parseFloat(btn.dataset.speed);
-                if (Math.abs(bSpeed - currentSpeed) < 0.01) {
-                    btn.className = "speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-indigo-500 bg-indigo-600 text-white";
+        function updateSpeedButtonsUI() {
+            document.getElementById('ja-speed-display').textContent = currentJaSpeed.toFixed(2) + "x";
+            document.getElementById('en-speed-display').textContent = currentEnSpeed.toFixed(2) + "x";
+
+            document.querySelectorAll('.ja-speed-btn').forEach(function(btn) {
+                var bSpeed = parseFloat(btn.dataset.speed);
+                if (Math.abs(bSpeed - currentJaSpeed) < 0.01) {
+                    btn.className = "ja-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-rose-500 bg-rose-600 text-white";
                 } else {
-                    btn.className = "speed-btn px-2.5 py-1 text-xs font-bold rounded-lg border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700";
+                    btn.className = "ja-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-slate-300 bg-white hover:bg-rose-50 text-slate-700";
                 }
             });
 
-            if (isPlaying && currentLineIndex >= 0) {
-                playCurrentLineSequence();
-            }
+            document.querySelectorAll('.en-speed-btn').forEach(function(btn) {
+                var bSpeed = parseFloat(btn.dataset.speed);
+                if (Math.abs(bSpeed - currentEnSpeed) < 0.01) {
+                    btn.className = "en-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-indigo-500 bg-indigo-600 text-white";
+                } else {
+                    btn.className = "en-speed-btn px-2 py-0.5 text-xs font-bold rounded border transition border-slate-300 bg-white hover:bg-indigo-50 text-slate-700";
+                }
+            });
         }
 
         function togglePlayPause() {
@@ -1032,6 +1142,7 @@
 
         function pausePlayback() {
             isPlaying = false;
+            activePlaybackToken++;
             clearPauseTimer();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -1042,6 +1153,7 @@
 
         function stopPlayback() {
             isPlaying = false;
+            activePlaybackToken++;
             clearPauseTimer();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -1055,8 +1167,8 @@
         }
 
         function updatePlayButtonUI() {
-            const btnText = document.getElementById('play-text');
-            const playIcon = document.getElementById('play-icon');
+            var btnText = document.getElementById('play-text');
+            var playIcon = document.getElementById('play-icon');
             if (isPlaying) {
                 btnText.textContent = "一時停止";
                 playIcon.className = "fa-solid fa-pause";
@@ -1107,9 +1219,18 @@
             }
         }
 
+        function toggleLineRepeat(index, isChecked) {
+            lineRepeatStates[index] = isChecked;
+            saveAllToStorage();
+        }
+
         function playCurrentLineSequence() {
             if (!('speechSynthesis' in window)) return;
             clearPauseTimer();
+            
+            activePlaybackToken++;
+            var localToken = activePlaybackToken;
+
             window.speechSynthesis.cancel();
 
             if (currentLineIndex < 0 || currentLineIndex >= activeScript.lines.length) {
@@ -1117,150 +1238,159 @@
                 return;
             }
 
-            const currentLine = activeScript.lines[currentLineIndex];
+            var currentLine = activeScript.lines[currentLineIndex];
             updateProgressUI();
 
-            executeStepJA(currentLine);
+            setTimeout(function() {
+                if (isPlaying && localToken === activePlaybackToken) {
+                    executeStepJA(currentLine, localToken);
+                }
+            }, 80);
         }
 
-        function executeStepJA(line) {
+        function executeStepJA(line, token) {
             currentSequenceStep = 'JA';
             highlightLineCard(currentLineIndex, 'JA');
             updateStepBanner('1. 日本語を読み上げ中', 'red');
 
             if (!line.ja) {
-                executeStepPause(line);
+                executeStepPause(line, token);
                 return;
             }
 
-            const utterance = new SpeechSynthesisUtterance(line.ja);
-            utterance.rate = currentSpeed;
-            utterance.lang = 'ja-JP';
+            var utterance = new SpeechSynthesisUtterance(line.ja);
+            utterance.rate = currentJaSpeed;
 
-            const targetJAURI = (line.speaker === 'A') ? selectedVoiceA_JA_URI : selectedVoiceB_JA_URI;
-            let matchedVoice = getVoiceByURI(targetJAURI);
-            
-            if (!matchedVoice && allJapaneseVoices.length > 0) {
-                matchedVoice = allJapaneseVoices[0];
-            }
+            var targetJAURI = (line.speaker === 'A') ? selectedVoiceA_JA_URI : selectedVoiceB_JA_URI;
+            var matchedVoice = getVoiceByURI(targetJAURI);
+            if (!matchedVoice && allJapaneseVoices.length > 0) matchedVoice = allJapaneseVoices[0];
 
             if (matchedVoice) {
                 utterance.voice = matchedVoice;
-                utterance.lang = matchedVoice.lang;
+            } else {
+                utterance.lang = 'ja-JP';
             }
 
-            utterance.onend = () => {
-                if (isPlaying) {
-                    setTimeout(() => executeStepPause(line), 150);
+            utterance.onend = function() {
+                if (isPlaying && token === activePlaybackToken) {
+                    setTimeout(function() { executeStepPause(line, token); }, 120);
                 }
             };
 
-            utterance.onerror = (e) => {
+            utterance.onerror = function(e) {
                 if (e.error === 'interrupted' || e.error === 'canceled') return;
-                if (isPlaying) executeStepPause(line);
+                if (isPlaying && token === activePlaybackToken) executeStepPause(line, token);
             };
 
-            setTimeout(() => {
-                if (isPlaying) window.speechSynthesis.speak(utterance);
-            }, 50);
+            window.speechSynthesis.speak(utterance);
         }
 
-        function executeStepPause(line) {
+        function skipCurrentPause() {
+            if (currentSequenceStep !== 'PAUSE' || !isPlaying) return;
+            clearPauseTimer();
+            if (activeScript && currentLineIndex >= 0 && currentLineIndex < activeScript.lines.length) {
+                var currentLine = activeScript.lines[currentLineIndex];
+                executeStepEN(currentLine, activePlaybackToken);
+            }
+        }
+
+        function executeStepPause(line, token) {
             currentSequenceStep = 'PAUSE';
             highlightLineCard(currentLineIndex, 'PAUSE');
-            updateStepBanner('2. ポーズ中（発声タイム）', 'amber');
+            updateStepBanner('2. ポーズ中（クリックでスキップ）', 'amber');
 
-            const wordCount = line.text.split(/\s+/).length || 10;
-            let estimatedDurationSec = (wordCount / 2.5) / currentSpeed;
-            estimatedDurationSec = Math.max(1.8, estimatedDurationSec) * currentPauseMultiplier;
+            var wordCount = (line.text || "").split(/\s+/).length || 8;
+            var estimatedDurationSec = (wordCount / 2.5) / currentEnSpeed;
+            estimatedDurationSec = Math.max(1.8, estimatedDurationSec); // 1.0倍固定
 
-            let remainingTime = estimatedDurationSec;
-            const totalTime = estimatedDurationSec;
-            const timerEl = document.getElementById(`pause-timer-${currentLineIndex}`);
-            const barFillEl = document.getElementById(`pause-bar-fill-${currentLineIndex}`);
+            var remainingTime = estimatedDurationSec;
+            var totalTime = estimatedDurationSec;
+            var timerEl = document.getElementById("pause-timer-" + currentLineIndex);
+            var barFillEl = document.getElementById("pause-bar-fill-" + currentLineIndex);
 
-            if (timerEl) timerEl.textContent = `${remainingTime.toFixed(1)}s`;
+            if (timerEl) timerEl.textContent = remainingTime.toFixed(1) + "s";
             if (barFillEl) barFillEl.style.width = '100%';
 
-            const updateInterval = 50;
-            pauseTimerId = setInterval(() => {
-                if (!isPlaying) {
+            var updateInterval = 50;
+            pauseTimerId = setInterval(function() {
+                if (!isPlaying || token !== activePlaybackToken) {
                     clearPauseTimer();
                     return;
                 }
 
                 remainingTime -= (updateInterval / 1000);
-                if (timerEl) {
-                    timerEl.textContent = `${Math.max(0, remainingTime).toFixed(1)}s`;
-                }
+                if (timerEl) timerEl.textContent = Math.max(0, remainingTime).toFixed(1) + "s";
                 if (barFillEl) {
-                    const pct = Math.max(0, (remainingTime / totalTime) * 100);
-                    barFillEl.style.width = `${pct}%`;
+                    var pct = Math.max(0, (remainingTime / totalTime) * 100);
+                    barFillEl.style.width = pct + "%";
                 }
 
                 if (remainingTime <= 0) {
                     clearPauseTimer();
-                    if (isPlaying) {
-                        executeStepEN(line);
+                    if (isPlaying && token === activePlaybackToken) {
+                        executeStepEN(line, token);
                     }
                 }
             }, updateInterval);
         }
 
-        function executeStepEN(line) {
+        function executeStepEN(line, token) {
             currentSequenceStep = 'EN';
             highlightLineCard(currentLineIndex, 'EN');
             updateStepBanner('3. 英語を読み上げ中', 'indigo');
 
             revealEnglish(currentLineIndex);
 
-            const utterance = new SpeechSynthesisUtterance(line.text);
-            utterance.rate = currentSpeed;
-            utterance.lang = 'en-US';
+            var utterance = new SpeechSynthesisUtterance(line.text);
+            utterance.rate = currentEnSpeed;
 
-            const targetURI = (line.speaker === 'A') ? selectedVoiceA_EN_URI : selectedVoiceB_EN_URI;
-            const matchedVoice = getVoiceByURI(targetURI);
+            var targetURI = (line.speaker === 'A') ? selectedVoiceA_EN_URI : selectedVoiceB_EN_URI;
+            var matchedVoice = getVoiceByURI(targetURI);
             if (matchedVoice) {
                 utterance.voice = matchedVoice;
-                utterance.lang = matchedVoice.lang;
+            } else {
+                utterance.lang = 'en-US';
             }
 
-            utterance.onend = () => {
+            utterance.onend = function() {
+                if (token !== activePlaybackToken) return;
+
                 if (currentLineIndex >= 0 && currentLineIndex < activeScript.lines.length) {
                     linePlayCounts[currentLineIndex] = (linePlayCounts[currentLineIndex] || 0) + 1;
-                    updateCountDisplay(currentLineIndex);
+                    var countEl = document.getElementById("count-badge-" + currentLineIndex);
+                    if (countEl) countEl.textContent = "再生: " + linePlayCounts[currentLineIndex] + "回";
+                    saveAllToStorage();
                 }
 
                 if (isPlaying) {
                     if (lineRepeatStates[currentLineIndex]) {
-                        setTimeout(() => {
-                            if (isPlaying) playCurrentLineSequence();
-                        }, 300);
+                        setTimeout(function() {
+                            if (isPlaying && token === activePlaybackToken) playCurrentLineSequence();
+                        }, 250);
                     } else if (currentLineIndex + 1 < activeScript.lines.length) {
                         currentLineIndex++;
                         playCurrentLineSequence();
                     } else {
                         stopPlayback();
+                        showToast("スクリプト全体の再生が完了しました！");
                     }
                 }
             };
 
-            utterance.onerror = (e) => {
+            utterance.onerror = function(e) {
                 if (e.error === 'interrupted' || e.error === 'canceled') return;
-                if (isPlaying) stopPlayback();
+                if (isPlaying && token === activePlaybackToken) stopPlayback();
             };
 
-            setTimeout(() => {
-                if (isPlaying) window.speechSynthesis.speak(utterance);
-            }, 50);
+            window.speechSynthesis.speak(utterance);
         }
 
         function highlightLineCard(index, step) {
-            document.querySelectorAll('#script-container > div').forEach((card, idx) => {
-                const jaBox = document.getElementById(`ja-box-${idx}`);
-                const pauseBox = document.getElementById(`pause-box-${idx}`);
-                const enBox = document.getElementById(`en-box-${idx}`);
-                const stepBadge = document.getElementById(`step-indicator-${idx}`);
+            document.querySelectorAll('#script-container > div').forEach(function(card, idx) {
+                var jaBox = document.getElementById("ja-box-" + idx);
+                var pauseBox = document.getElementById("pause-box-" + idx);
+                var enBox = document.getElementById("en-box-" + idx);
+                var stepBadge = document.getElementById("step-indicator-" + idx);
 
                 if (idx === index) {
                     card.classList.add('active-card');
@@ -1282,17 +1412,17 @@
                         }
                     }
 
-                    if (jaBox) jaBox.className = step === 'JA' ? "p-2.5 rounded-xl bg-red-100 border-2 border-red-400 shadow-sm transition" : "p-2.5 rounded-xl bg-slate-50 border border-slate-200 opacity-60";
+                    if (jaBox) jaBox.className = step === 'JA' ? "p-2.5 rounded-xl bg-red-100 border-2 border-red-400 shadow-sm transition space-y-1" : "p-2.5 rounded-xl bg-slate-50 border border-slate-200 opacity-65 space-y-1";
                     if (pauseBox) {
                         if (step === 'PAUSE') pauseBox.classList.remove('hidden');
                         else pauseBox.classList.add('hidden');
                     }
-                    if (enBox) enBox.className = step === 'EN' ? "p-2.5 rounded-xl bg-indigo-100 border-2 border-indigo-500 shadow-sm transition" : "p-2.5 rounded-xl bg-slate-50 border border-slate-200 opacity-60";
+                    if (enBox) enBox.className = step === 'EN' ? "p-2.5 rounded-xl bg-indigo-100 border-2 border-indigo-500 shadow-sm transition" : "p-2.5 rounded-xl bg-slate-50 border border-slate-200 opacity-65";
 
                 } else {
                     card.classList.remove('active-card');
                     if (stepBadge) stepBadge.classList.add('hidden');
-                    if (jaBox) jaBox.className = "p-2.5 rounded-xl bg-slate-50 border border-slate-200";
+                    if (jaBox) jaBox.className = "p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1";
                     if (pauseBox) pauseBox.classList.add('hidden');
                     if (enBox) enBox.className = "p-2.5 rounded-xl bg-slate-50 border border-slate-200";
                 }
@@ -1300,10 +1430,9 @@
         }
 
         function updateStepBanner(text, color) {
-            const el = document.getElementById('active-step-status');
+            var el = document.getElementById('active-step-status');
             if (!el) return;
-            el.innerHTML = `<i class="fa-solid fa-circle-dot"></i> <span>${text}</span>`;
-
+            el.innerHTML = '<i class="fa-solid fa-circle-dot"></i> <span>' + text + '</span>';
             el.className = "text-xs font-black px-3 py-1 rounded-lg transition flex items-center gap-1.5 ";
             if (color === 'red') el.className += "bg-red-500 text-white animate-pulse";
             else if (color === 'amber') el.className += "bg-amber-500 text-white animate-pulse";
@@ -1312,12 +1441,11 @@
         }
 
         function updateProgressUI() {
-            const total = activeScript ? activeScript.lines.length : 0;
-            const currentDisplay = currentLineIndex >= 0 ? currentLineIndex + 1 : 0;
-            document.getElementById('progress-indicator').textContent = `行 ${currentDisplay} / ${total}`;
-
-            const pct = total > 0 ? (currentDisplay / total) * 100 : 0;
-            document.getElementById('progress-bar-fill').style.width = `${pct}%`;
+            var total = activeScript ? activeScript.lines.length : 0;
+            var currentDisplay = currentLineIndex >= 0 ? currentLineIndex + 1 : 0;
+            document.getElementById('progress-indicator').textContent = "行 " + currentDisplay + " / " + total;
+            var pct = total > 0 ? (currentDisplay / total) * 100 : 0;
+            document.getElementById('progress-bar-fill').style.width = pct + "%";
         }
 
         function resetPlayback() {
@@ -1325,10 +1453,84 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        function openLineEditModal(index) {
+            editingLineIndex = index;
+            var line = activeScript.lines[index];
+            document.getElementById('edit-line-en-text').textContent = line.text;
+            document.getElementById('edit-line-ja-input').value = line.ja || '';
+            document.getElementById('line-edit-modal').classList.remove('hidden');
+        }
+
+        function closeLineEditModal() {
+            document.getElementById('line-edit-modal').classList.add('hidden');
+            editingLineIndex = null;
+        }
+
+        function saveLineJaTranslation() {
+            if (editingLineIndex === null || !activeScript) return;
+            var newJa = document.getElementById('edit-line-ja-input').value.trim();
+            activeScript.lines[editingLineIndex].ja = newJa;
+            
+            var jaTextEl = document.getElementById("ja-text-" + editingLineIndex);
+            if (jaTextEl) jaTextEl.textContent = newJa || '(日本語訳なし)';
+
+            saveAllToStorage();
+            closeLineEditModal();
+            showToast("行 #" + (editingLineIndex + 1) + " の日本語訳を更新しました！");
+        }
+
+        function openEditTitleModal() {
+            if (!activeScript) return;
+            document.getElementById('edit-script-title-input').value = activeScript.title;
+            document.getElementById('edit-speaker-a-input').value = activeScript.speakerA || 'Person A';
+            document.getElementById('edit-speaker-b-input').value = activeScript.speakerB || 'Person B';
+            document.getElementById('script-title-modal').classList.remove('hidden');
+        }
+
+        function closeEditTitleModal() {
+            document.getElementById('script-title-modal').classList.add('hidden');
+        }
+
+        function saveScriptTitleAndSpeakers() {
+            if (!activeScript) return;
+            var title = document.getElementById('edit-script-title-input').value.trim();
+            if (!title) {
+                showToast("タイトルを入力してください。");
+                return;
+            }
+
+            activeScript.title = title;
+            activeScript.speakerA = document.getElementById('edit-speaker-a-input').value.trim() || 'Person A';
+            activeScript.speakerB = document.getElementById('edit-speaker-b-input').value.trim() || 'Person B';
+
+            saveAllToStorage();
+            populateScriptSelector();
+            renderScriptContent();
+            closeEditTitleModal();
+            showToast("スクリプトの基本情報を保存しました！");
+        }
+
+        function deleteCurrentScript() {
+            if (scriptsList.length <= 1) {
+                showToast("最後の1つのスクリプトは削除できません。");
+                return;
+            }
+
+            var confirmTitle = activeScript.title;
+            scriptsList = scriptsList.filter(function(s) { return s.id !== activeScript.id; });
+            currentScriptId = scriptsList[0].id;
+            activeScript = scriptsList[0];
+
+            saveAllToStorage();
+            switchScript(currentScriptId);
+            closeEditTitleModal();
+            showToast("スクリプト「" + confirmTitle + "」を削除しました。");
+        }
+
         function openScriptModal() {
             document.getElementById('modal-script-title').value = '';
             document.getElementById('modal-script-text').value = '';
-            const fileInput = document.getElementById('modal-script-file');
+            var fileInput = document.getElementById('modal-script-file');
             if (fileInput) fileInput.value = '';
             document.getElementById('script-modal').classList.remove('hidden');
         }
@@ -1337,20 +1539,10 @@
             document.getElementById('script-modal').classList.add('hidden');
         }
 
-        function openVoiceModal() {
-            populateVoiceSelects();
-            document.getElementById('voice-modal').classList.remove('hidden');
-        }
-
-        function closeVoiceModal() {
-            document.getElementById('voice-modal').classList.add('hidden');
-        }
-
         function handleFileDrop(e) {
             e.preventDefault();
-            const dropZone = e.currentTarget;
+            var dropZone = e.currentTarget;
             dropZone.classList.remove('border-indigo-600', 'bg-indigo-100');
-
             if (e.dataTransfer && e.dataTransfer.files.length > 0) {
                 processUploadedFile(e.dataTransfer.files[0]);
             }
@@ -1362,134 +1554,164 @@
             }
         }
 
-        function processUploadedFile(file) {
+        async function processUploadedFile(file) {
             if (!file) return;
 
-            const reader = new FileReader();
-            const fileName = file.name;
-            const ext = fileName.split('.').pop().toLowerCase();
+            var fileName = file.name;
+            var ext = fileName.split('.').pop().toLowerCase();
+            document.getElementById('modal-script-title').value = fileName.replace(/\.[^/.]+$/, "");
 
-            reader.onload = (evt) => {
-                const content = evt.target.result;
-
+            if (ext === 'docx') {
+                showToast("Wordファイル (.docx) を解析中...");
                 try {
-                    if (ext === 'json') {
-                        const parsedJson = JSON.parse(content);
-                        if (parsedJson.title) {
-                            document.getElementById('modal-script-title').value = parsedJson.title;
-                        } else {
-                            document.getElementById('modal-script-title').value = fileName.replace(/\.[^/.]+$/, "");
-                        }
-
-                        if (parsedJson.speakerA) document.getElementById('modal-speaker-a').value = parsedJson.speakerA;
-                        if (parsedJson.speakerB) document.getElementById('modal-speaker-b').value = parsedJson.speakerB;
-
-                        if (Array.isArray(parsedJson.lines)) {
-                            const formattedLines = parsedJson.lines.map(line => {
-                                const spk = line.speaker || 'A';
-                                return `${spk}: ${line.text || ''} | ${line.ja || ''}`;
-                            }).join('\n');
-                            document.getElementById('modal-script-text').value = formattedLines;
-                        }
-                        showToast(`JSONファイル「${fileName}」を取り込みました。`);
-
-                    } else if (ext === 'csv' || ext === 'tsv') {
-                        const delimiter = ext === 'tsv' ? '\t' : ',';
-                        const rows = content.split(/\r?\n/);
-                        const linesText = [];
-
-                        rows.forEach((rowStr) => {
-                            if (!rowStr.trim()) return;
-                            const cols = rowStr.split(delimiter).map(c => c.trim().replace(/^"(.*)"$/, '$1'));
-                            if (cols.length >= 2) {
-                                const speaker = cols[0].toUpperCase().includes('B') ? 'B' : 'A';
-                                const enText = cols[1] || '';
-                                const jaText = cols[2] || '';
-                                linesText.push(`${speaker}: ${enText} | ${jaText}`);
-                            }
-                        });
-
-                        document.getElementById('modal-script-title').value = fileName.replace(/\.[^/.]+$/, "");
-                        document.getElementById('modal-script-text').value = linesText.join('\n');
-                        showToast(`表データファイル「${fileName}」を取り込みました。`);
-
-                    } else {
-                        // Text file (.txt)
-                        document.getElementById('modal-script-title').value = fileName.replace(/\.[^/.]+$/, "");
-                        document.getElementById('modal-script-text').value = content;
-                        showToast(`テキストファイル「${fileName}」を取り込みました。`);
-                    }
+                    var arrayBuffer = await file.arrayBuffer();
+                    var result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                    var rawText = result.value || '';
+                    parseWordTextToScript(rawText);
+                    showToast("Wordドキュメントの解析が完了しました！");
                 } catch (err) {
-                    console.error("File parse error:", err);
-                    showToast("ファイルの取り込みに失敗しました。フォーマットを確認してください。");
+                    console.error("Mammoth docx parse error:", err);
+                    showToast("Wordファイルの解析に失敗しました。");
                 }
-            };
+            } else {
+                var reader = new FileReader();
+                reader.onload = function(evt) {
+                    var content = evt.target.result;
+                    document.getElementById('modal-script-text').value = content;
+                    showToast("ファイル「" + fileName + "」を読み込みました。");
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+        }
 
-            reader.readAsText(file, 'UTF-8');
+        function parseWordTextToScript(text) {
+            var rawLines = text.split(/\r?\n/);
+            var formattedOutput = [];
+            var currentSpeaker = 'A';
+
+            rawLines.forEach(function(lineStr) {
+                var trimmed = lineStr.trim();
+                if (!trimmed) return;
+
+                var speakerMatch = trimmed.match(/^(Person\s+[AB]|Speaker\s+[AB]|[AB])\s*[:：]\s*(.*)$/i);
+                
+                var speakerTag = currentSpeaker;
+                var bodyText = trimmed;
+
+                if (speakerMatch) {
+                    var matchedTag = speakerMatch[1].toUpperCase();
+                    if (matchedTag.includes('B')) speakerTag = 'B';
+                    else speakerTag = 'A';
+                    currentSpeaker = speakerTag;
+                    bodyText = speakerMatch[2].trim();
+                }
+
+                if (!bodyText) return;
+
+                var sentences = bodyText.match(/[^.!?]+[.!?]+/g) || [bodyText];
+
+                sentences.forEach(function(sen) {
+                    var sTrim = sen.trim();
+                    if (!sTrim) return;
+
+                    var autoJa = generateAutoTranslation(sTrim);
+                    formattedOutput.push((speakerTag === 'A' ? 'Person A' : 'Person B') + ": " + sTrim + " | " + autoJa);
+                });
+            });
+
+            document.getElementById('modal-script-text').value = formattedOutput.join('\n');
+        }
+
+        function generateAutoTranslation(enText) {
+            var clean = enText.trim();
+            var dict = [
+                { en: "Good morning, Gemini!", ja: "おはよう、Gemini！" },
+                { en: "I'd like to practice my English with you today by having a short conversation.", ja: "今日は短い会話をして英語の練習をしたいです。" },
+                { en: "Good morning! I’d love to help.", ja: "おはようございます！ぜひお手伝いさせてください。" },
+                { en: "How did you start your day today?", ja: "今日はどのように一日を始めましたか？" },
+                { en: "Actually, I’d like to talk about the movie Michael.", ja: "実は、映画『マイケル』について話したいんです。" },
+                { en: "When I was younger, I wasn't really interested in his music or performance, but watching the movie after its release completely changed my perspective.", ja: "若い頃は彼の音楽やパフォーマンスにあまり興味がなかったのですが、公開後に映画を見て見方が完全に変わりました。" },
+                { en: "It’s fascinating how a film can change your view like that!", ja: "映画がそんな風に見方を変えてくれるなんて魅力的ですね！" },
+                { en: "What specific aspects of his life stood out to you?", ja: "彼の人生のどんな部分が特に印象に残りましたか？" },
+                { en: "I was deeply touched by his compassion for children and how he frequently visited hospitals to bring them joy.", ja: "子供たちへの思いやりや、彼らを喜ばせるために頻繁に病院を訪れていたことに深く感動しました。" },
+                { en: "Besides his personality, his incredible dancing really captured my attention.", ja: "彼の人柄だけでなく、彼の素晴らしいダンスにも本当に心を奪われました。" },
+                { en: "Jaafar Jackson’s portrayal really brought those iconic moves to life on screen, didn't he?", ja: "ジャファー・ジャクソンの演技は、スクリーン上でそれらの象徴的な動きを見事に蘇らせていましたよね？" },
+                { en: "Absolutely!", ja: "その通りです！" },
+                { en: "His performance as Michael was so impressive that it actually inspired me to start practicing.", ja: "マイケル役としての彼のパフォーマンスはとても印象的で、実際に私も練習を始めるきっかけになりました。" },
+                { en: "The intro to Billie Jean was so cool that I even bought a fedora hat to practice the pose myself.", ja: "『ビリー・ジーン』のイントロがすごく格好良かったので、自分でもポーズを練習するためにフェドーラハットを買ってしまったくらいです。" },
+                { en: "That’s awesome!", ja: "それは素晴らしいですね！" },
+                { en: "Having the right hat definitely makes practice more exciting.", ja: "ぴったりの帽子があると練習がさらに楽しくなりますね。" },
+                { en: "Have you been working on any specific techniques?", ja: "何か具体的なテクニックに取り組んでいますか？" },
+                { en: "Yes, I’ve been practicing body isolations for about two months now.", ja: "はい、もう2ヶ月ほどボディ・アイソレーションの練習をしています。" },
+                { en: "It’s tough to control each part independently, but I noticed an unexpected benefit:", ja: "各部位を独立してコントロールするのは難しいですが、予想外の効果に気づきました。" },
+                { en: "It makes my brain feel super sharp and focused.", ja: "脳がとても冴えて集中できるように感じるんです。" },
+                { en: "That makes total sense!", ja: "完全に納得です！" },
+                { en: "Physical control requires deep concentration.", ja: "身体のコントロールには深い集中力が必要ですものね。" },
+                { en: "Does that mental clarity feel familiar to you?", ja: "その頭の冴えは、何か聞き覚えのある感覚ですか？" },
+                { en: "Exactly.", ja: "その通りです。" },
+                { en: "As a trail runner, I always get that clear-minded, motivated feeling after a long run, and isolation training gives me a very similar boost.", ja: "トレイルランナーとして、長距離を走った後はいつも頭がすっきりしてモチベーションが高まる感覚があるのですが、アイソレーショントレーニングも非常に似た良い影響を与えてくれます。" },
+                { en: "With my athletic endurance and consistent practice, I’m confident I’ll master his signature moves eventually!", ja: "運動で培った持久力と継続的な練習があれば、いつか彼の代表的な動きをマスターできると確信しています！" },
+                { en: "With that level of dedication, you’ll definitely get there.", ja: "それほどの熱意があれば、絶対に達成できますよ。" },
+                { en: "Keep up the great work, and have a wonderful day at work!", ja: "その調子で頑張ってください。今日もお仕事頑張ってくださいね！" }
+            ];
+
+            var found = dict.find(function(item) {
+                return item.en.toLowerCase().replace(/\s+/g,' ') === clean.toLowerCase().replace(/\s+/g,' ');
+            });
+            if (found) return found.ja;
+
+            return clean;
         }
 
         function insertSampleScriptText() {
             document.getElementById('modal-script-title').value = "日常の会話練習";
-            document.getElementById('modal-speaker-a').value = "A";
-            document.getElementById('modal-speaker-b').value = "B";
+            document.getElementById('modal-speaker-a').value = "Person A";
+            document.getElementById('modal-speaker-b').value = "Person B";
             document.getElementById('modal-script-text').value = 
-                "A: How was your weekend? | 週末はどうでしたか？\n" +
-                "B: It was great! I went hiking in the mountains. | とても楽しかったです！山へハイキングに行きました。\n" +
-                "A: That sounds wonderful! Was the weather good? | それは素敵ですね！お天気は良かったですか？\n" +
-                "B: Yes, it was sunny all day long. | はい、一日中晴れていました。";
+                "Person A: How was your weekend? | 週末はどうでしたか？\n" +
+                "Person B: It was great! I went hiking in the mountains. | とても楽しかったです！山へハイキングに行きました。\n" +
+                "Person A: That sounds wonderful! Was the weather good? | それは素敵ですね！お天気は良かったですか？\n" +
+                "Person B: Yes, it was sunny all day long. | はい、一日中晴れていました。";
         }
 
         function saveCustomScript() {
-            const title = document.getElementById('modal-script-title').value.trim();
-            const speakerA = document.getElementById('modal-speaker-a').value.trim() || 'Speaker A';
-            const speakerB = document.getElementById('modal-speaker-b').value.trim() || 'Speaker B';
-            const textRaw = document.getElementById('modal-script-text').value.trim();
+            var title = document.getElementById('modal-script-title').value.trim();
+            var speakerA = document.getElementById('modal-speaker-a').value.trim() || 'Person A';
+            var speakerB = document.getElementById('modal-speaker-b').value.trim() || 'Person B';
+            var textRaw = document.getElementById('modal-script-text').value.trim();
 
-            if (!title) {
-                showToast("スクリプトのタイトルを入力してください。");
-                return;
-            }
-            if (!textRaw) {
-                showToast("対話テキストデータに入力してください。");
-                return;
-            }
+            if (!title) { showToast("タイトルを入力してください。"); return; }
+            if (!textRaw) { showToast("対話テキストを入力してください。"); return; }
 
-            const rawLines = textRaw.split(/\r?\n/);
-            const parsedLines = [];
+            var rawLines = textRaw.split(/\r?\n/);
+            var parsedLines = [];
 
-            rawLines.forEach(lineStr => {
-                const trimmed = lineStr.trim();
+            rawLines.forEach(function(lineStr) {
+                var trimmed = lineStr.trim();
                 if (!trimmed) return;
 
-                let speaker = 'A';
-                let mainContent = trimmed;
+                var speaker = 'A';
+                var mainContent = trimmed;
 
-                const speakerMatch = trimmed.match(/^(?:Speaker\s*)?([ABab12]|ランナー|コーチ|私|あなた)\s*[:：\s]\s*(.*)$/i);
+                var speakerMatch = trimmed.match(/^(?:Speaker\s*|Person\s*)?([ABab12]|ランナー|コーチ|私|あなた)\s*[:：\s]\s*(.*)$/i);
                 if (speakerMatch) {
-                    const spkChar = speakerMatch[1].toUpperCase();
-                    if (spkChar === 'B' || spkChar === '2' || spkChar === 'コーチ' || spkChar === '私') {
-                        speaker = 'B';
-                    } else {
-                        speaker = 'A';
-                    }
+                    var spkChar = speakerMatch[1].toUpperCase();
+                    if (spkChar.includes('B') || spkChar === '2' || spkChar === 'コーチ') speaker = 'B';
+                    else speaker = 'A';
                     mainContent = speakerMatch[2];
                 }
 
-                let enText = mainContent;
-                let jaText = '';
+                var enText = mainContent;
+                var jaText = '';
 
                 if (mainContent.includes('|')) {
-                    const parts = mainContent.split('|');
+                    var parts = mainContent.split('|');
                     enText = parts[0].trim();
                     jaText = parts.slice(1).join('|').trim();
                 } else if (mainContent.includes('｜')) {
-                    const parts = mainContent.split('｜');
-                    enText = parts[0].trim();
-                    jaText = parts.slice(1).join('｜').trim();
-                } else if (mainContent.includes('\t')) {
-                    const parts = mainContent.split('\t');
-                    enText = parts[0].trim();
-                    jaText = parts.slice(1).join(' ').trim();
+                    var parts2 = mainContent.split('｜');
+                    enText = parts2[0].trim();
+                    jaText = parts2.slice(1).join('｜').trim();
                 }
 
                 if (enText || jaText) {
@@ -1502,11 +1724,11 @@
             });
 
             if (parsedLines.length === 0) {
-                showToast("有効な対話行が解析できませんでした。フォーマットを確認してください。");
+                showToast("有効な対話行が解析できませんでした。");
                 return;
             }
 
-            const newScript = {
+            var newScript = {
                 id: 'script_' + Date.now(),
                 title: title,
                 speakerA: speakerA,
@@ -1515,13 +1737,102 @@
             };
 
             scriptsList.push(newScript);
-            saveScriptsToStorage();
+            saveAllToStorage();
 
             currentScriptId = newScript.id;
             switchScript(newScript.id);
-
             closeScriptModal();
-            showToast(`新スクリプト「${title}」を登録しました！`);
+            showToast("新スクリプト「" + title + "」を登録・自動バックアップしました！");
+        }
+
+        function openBackupModal() {
+            var lastTime = localStorage.getItem('trainer_last_backup_time') || '自動保存中';
+            document.getElementById('last-backup-time').textContent = "最終自動バックアップ: " + lastTime;
+            document.getElementById('backup-modal').classList.remove('hidden');
+        }
+
+        function closeBackupModal() {
+            document.getElementById('backup-modal').classList.add('hidden');
+        }
+
+        function openVoiceModal() {
+            populateVoiceSelects();
+            document.getElementById('voice-modal').classList.remove('hidden');
+        }
+
+        function closeVoiceModal() {
+            document.getElementById('voice-modal').classList.add('hidden');
+        }
+
+        function exportBackupJSON() {
+            var backupData = {
+                version: "2.0",
+                exportDate: new Date().toISOString(),
+                scripts: scriptsList,
+                voiceSettings: {
+                    selectedVoiceA_EN_URI: selectedVoiceA_EN_URI,
+                    selectedVoiceA_JA_URI: selectedVoiceA_JA_URI,
+                    selectedVoiceB_EN_URI: selectedVoiceB_EN_URI,
+                    selectedVoiceB_JA_URI: selectedVoiceB_JA_URI
+                },
+                speeds: {
+                    currentJaSpeed: currentJaSpeed,
+                    currentEnSpeed: currentEnSpeed
+                }
+            };
+
+            var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            var dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", "english_trainer_backup_" + Date.now() + ".json");
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+
+            showToast("全データのバックアップJSONを出力しました！");
+        }
+
+        function importBackupJSON(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    var parsed = JSON.parse(evt.target.result);
+                    if (parsed && Array.isArray(parsed.scripts)) {
+                        scriptsList = parsed.scripts;
+                        if (parsed.voiceSettings) {
+                            selectedVoiceA_EN_URI = parsed.voiceSettings.selectedVoiceA_EN_URI || '';
+                            selectedVoiceA_JA_URI = parsed.voiceSettings.selectedVoiceA_JA_URI || '';
+                            selectedVoiceB_EN_URI = parsed.voiceSettings.selectedVoiceB_EN_URI || '';
+                            selectedVoiceB_JA_URI = parsed.voiceSettings.selectedVoiceB_JA_URI || '';
+                        }
+                        if (parsed.speeds) {
+                            currentJaSpeed = parsed.speeds.currentJaSpeed || 1.0;
+                            currentEnSpeed = parsed.speeds.currentEnSpeed || 1.0;
+                        }
+
+                        saveAllToStorage();
+                        currentScriptId = scriptsList[0].id;
+                        activeScript = scriptsList[0];
+                        
+                        populateScriptSelector();
+                        resetLineStates();
+                        renderScriptContent();
+                        updateSpeedButtonsUI();
+                        closeBackupModal();
+
+                        showToast("バックアップデータからすべてのスクリプトを復元しました！");
+                    } else {
+                        showToast("無効なバックアップファイルフォーマットです。");
+                    }
+                } catch (err) {
+                    console.error("JSON import error:", err);
+                    showToast("JSONファイルの復元に失敗しました。");
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
         }
     </script>
 </body>
